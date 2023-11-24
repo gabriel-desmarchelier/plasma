@@ -1,11 +1,13 @@
 # Introduction
 
-Easily create a state machine diagram from your SNL program. Based on the Mermaid diagramming tool.
+Welcome to PLASMA ! PLAin State Machine Acquaintance allows one to easily create a state machine diagram from a SNL program. It is based on the Mermaid diagramming tool.
 
 # Usage
 
 The script generates Mermaid-based Markdown file. This file needs to be rendered with tools that manage Mermaid diagrams.
 Pandoc / quarto : to do
+
+PLASMA is based on regex, so some cases may not be managed. Feel free to contribute.
 
 Usage: ./script.py path/to/your_file.st path/to/output_diagram.md
 
