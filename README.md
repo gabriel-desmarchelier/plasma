@@ -4,7 +4,7 @@ Welcome to PLASMA ! PLAin State Machine Acquaintance allows one to easily create
 
 # Usage
 
-The script generates Mermaid-based Markdown file. This file needs to be rendered with tools that manage Mermaid diagrams.
+The script generates Mermaid-based Markdown file. This file needs to be rendered with tools that manage Mermaid diagrams (Gitlab does, that's a good start !)
 Pandoc / quarto : to do
 
 PLASMA is based on regex, so some cases may not be managed. Feel free to contribute.
@@ -73,5 +73,3 @@ stateDiagram
     state3 --> state1: when (myPv1==0) 
     state3 --> state2: when (myPv1==myPv2) do myPv1=0 
 ```
-
-![img](example.png "Example")
