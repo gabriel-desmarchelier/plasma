@@ -1,0 +1,3 @@
+[submodule "tree-sitter-epics"]
+	path = tree-sitter-epics
+	url = git@github.com:epics-extensions/tree-sitter-epics.git

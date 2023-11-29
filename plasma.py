@@ -1,116 +1,187 @@
 #!/usr/bin/env python
 
-import re
-import sys
+from tree_sitter import Language, Parser
+import argparse
+import logging
+
+
+def print_if_statement(parent_child, state_name):
+    for if_statement_child in parent_child.children:
+        if if_statement_child.type == 'binary_expression':
+            condition = if_statement_child.text.decode('utf-8')
+            mermaid_code += f"    {state_name}_transition_{transition_state_id} : if {condition} #colon; \n"
+        elif if_statement_child.type == 'statement':
+            for statement_child in if_statement_child.children :
+                if statement_child.type == 'block' :
+                    for block_child in statement_child.children :
+                        if block_child.type == 'statement':
+                            for statement_child in block_child.children:
+                                # Looking for assignments
+                                if statement_child.type == 'assignment_expression':
+                                    consequence = statement_child.text.decode('utf-8')
+                                    mermaid_code += f"    {state_name}_transition_{transition_state_id}: #nbsp; #nbsp; {consequence}\n"
+        elif if_statement_child.type == 'else_statement':
+            for else_statement_child in if_statement_child.children :
+                if else_statement_child.type == 'statement':
+                    for statement_child in else_statement_child.children :
+                        print(statement_child.type)
+                        # Looking for "else if" statements
+                        if statement_child.type == 'if_statement':
+                            print_if_statement(statement_child,state_name)
 
 def parse_snl(file_path, output_file_path):
+
+    parserTree = Parser()
+    parserTree.set_language(DB_LANGUAGE)
+
     try:
-        with open(file_path, 'r') as f:
-            snl_content = f.readlines()
+        #with open(file_path, 'r') as f:
+        #    snl_content = f.readlines()
+
+        with open(file_path, 'r') as file:
+            snl_content = file.read()
+
+        tree = parserTree.parse(bytes(snl_content, 'utf-8'))
+        root_node = tree.root_node
 
         # Generate Mermaid diagram code
         mermaid_code = "```mermaid\n"
         mermaid_code += "stateDiagram\n"
+        
+        # Defining styling for diagram
+        mermaid_code += "    classDef state_style fill:#FFFAAA,stroke:black,color:black\n"
+        mermaid_code += "    classDef transition_style fill:#CFFFA0,stroke:black,color:black\n"
 
         state_name=""
         entry=""
         entry_action=""
         transition=""
         transition_actions=""
-        for line in snl_content:
-            print(line)
-            # Looking for new state
-            m = re.search(r'^(\s)*state(\s)+(?P<state_name>.*)', line)
-            if m is not None:
-                state_name=m.group('state_name')
-                mermaid_code += f"    {state_name} : {state_name}\n"
-                continue
-            # Looking for entry actions of the state
-            m = re.search(r'^(\s)*entry.*', line)
-            if m is not None:
-                entry=True
-                print("entry starts")
-                continue
-            # If entry has been found, entry actions need to be written into the diagram
-            if entry is True:
-                # Do not do anything for lines starting with opening brace
-                m = re.search(r'^(\s)*{.*', line)
-                if m is not None:
-                    print(line)
-                    continue
-                # Do not write entry actions including "pvPut"
-                m = re.search(r'^(\s)*pvPut(.)*', line)
-                if m is not None:
-                    print(line)
-                    continue
-                # Do not write anything for lines starting with closing brace
-                m = re.search(r'^(\s)*}.*', line)
-                if m is not None:
-                    print(line)
-                    # The closing brace marks the end of the entry actions
-                    entry=False
-                    print("entry ends")
-                    continue
-                # If none of the above conditions is matched, then we have an entry action to be written in the diagram
-                m = re.search(r'^(\s)*(?P<entry_action>.*);', line)
-                if m is not None:
-                    print(line)
-                    print("entry action found")
-                    entry_action = m.group("entry_action")
-                    mermaid_code += f"    {state_name} : {entry_action}\n"
-                    continue
-                # Do not do anything for other lines (e.g. blank lines)
-                else:
-                    continue
-            # Looking for "when" conditions
-            m = re.search(r'^(\s)*when(\s)+(?P<condition>.*)', line)
-            if m is not None:
-                condition=m.group('condition')
-                transition=True
-                print("transiton starts")
-                continue
-            if transition is True:
-                # If the "state" statement appears, it marks the end of the transition actions
-                m = re.search(r'^(.)*}(\s)state+(?P<link_name>.*)', line)
-                if m is not None:
-                    print(line)
-                    link_name=m.group('link_name')
-                    mermaid_code += f"    {state_name} -->{link_name}: when {condition} "
-                    if (len(transition_actions) != 0):
-                        mermaid_code += f"do {transition_actions}\n"
-                    else:
-                        mermaid_code += f"\n"
-                    transition_actions=""
-                    transition=False
-                    print("transition ends")
-                    continue
-                # Do not do anything for lines starting with only opening brace
-                m = re.search(r'^(\s)*{(\s)*$', line)
-                if m is not None:
-                    print(line)
-                    continue
-                # Do not write transition actions including "pvPut"
-                m = re.search(r'^(\s)*pvPut(.)*', line)
-                if m is not None:
-                    print(line)
-                    continue
-                # Do not write anything for lines starting with closing brace
-                m = re.search(r'^(\s)*}.*', line)
-                if m is not None:
-                    print(line)
-                    # The closing brace marks the end of the transition actions
-                    continue
-                # If none of the above conditions is matched, then we have an transition action to be written in the diagram
-                m = re.search(r'^(\s)*(?P<transition_action>.*);', line)
-                if m is not None:
-                    print(line)
-                    print("transition action found")
-                    transition_actions += m.group("transition_action") + " "
-                    print(transition_actions)
-                    continue
-                # Do not do anything for other lines (e.g. blank lines)
-                else:
-                    continue
+
+        for child in root_node.children:
+            # Looking for a new program
+            if child.type == 'program':
+                print("New program")
+                for program_child in child.children:
+                    # Looking for a new state set
+                    if program_child.type == 'state_set':
+                        print("New ss")
+                        for state_set_child in program_child.children :
+                            # Looking for a new state
+                            if state_set_child.type == 'state':
+                                for state_child in state_set_child.children:
+                                    # Looking for the state name
+                                    if state_child.type == 'identifier':
+                                        state_name=state_child.text.decode('utf-8')
+                                        mermaid_code += f"    {state_name}:::state_style\n"
+                                        mermaid_code += f"    {state_name} : {state_name}\n"
+                                    elif state_child.type == 'state_block':
+                                        transition_state_id = 0
+                                        for state_block_child in state_child.children:
+                                            # Looking for the entry in the state
+                                            if state_block_child.type == 'entry':
+                                                for entry_child in state_block_child.children:
+                                                    if entry_child.type == 'block':
+                                                        for entry_block_child in entry_child.children:
+                                                            # Looking for the statements in the entry block
+                                                            if entry_block_child.type == 'statement':
+                                                                for statement_child in entry_block_child.children:
+                                                                    # Looking for assignments
+                                                                    if statement_child.type == 'assignment_expression':
+                                                                        entry_action=statement_child.text.decode('utf-8')
+                                                                        mermaid_code += f"    {state_name} : {entry_action}\n"
+                                            # Looking for "when"
+                                            elif state_block_child.type == 'transition':
+                                                transition_state_id += 1
+                                                mermaid_code += f"    {state_name}_transition_{transition_state_id}:::transition_style\n"
+                                                mermaid_code += f"    {state_name} -->{state_name}_transition_{transition_state_id}\n"
+                                                for transition_child in state_block_child.children :
+                                                    # Looking for transition condition
+                                                    if transition_child.type == 'binary_expression':
+                                                        condition=transition_child.text.decode('utf-8')
+                                                        mermaid_code += f"    {state_name}_transition_{transition_state_id} : when {condition}\n"
+                                                    # Looking for transition actions
+                                                    elif transition_child.type == 'block' :
+                                                        for transition_block_child in transition_child.children :
+                                                            if transition_block_child.type == 'statement':
+                                                                for statement_child in transition_block_child.children:
+                                                                    # Looking for assignments
+                                                                    if statement_child.type == 'assignment_expression':
+                                                                        transition_action = f"{statement_child.text.decode('utf-8')}"
+                                                                        mermaid_code += f"    {state_name}_transition_{transition_state_id}: {transition_action}\n"
+                                                                    # Looking for "if" statements
+                                                                    elif statement_child.type == 'if_statement':
+                                                                        for if_statement_child in statement_child.children:
+                                                                            if if_statement_child.type == 'binary_expression':
+                                                                                condition = if_statement_child.text.decode('utf-8')
+                                                                                mermaid_code += f"    {state_name}_transition_{transition_state_id} : if {condition} #colon; \n"
+                                                                            elif if_statement_child.type == 'statement':
+                                                                                for statement_child in if_statement_child.children :
+                                                                                    if statement_child.type == 'block' :
+                                                                                        for block_child in statement_child.children :
+                                                                                            if block_child.type == 'statement':
+                                                                                                for statement_child in block_child.children:
+                                                                                                    # Looking for assignments
+                                                                                                    if statement_child.type == 'assignment_expression':
+                                                                                                        consequence = statement_child.text.decode('utf-8')
+                                                                                                        mermaid_code += f"    {state_name}_transition_{transition_state_id}: #nbsp; #nbsp; {consequence}\n"
+                                                                            elif if_statement_child.type == 'else_statement':
+                                                                                for else_statement_child in if_statement_child.children :
+                                                                                    if else_statement_child.type == 'statement':
+                                                                                        for statement_child in else_statement_child.children :
+                                                                                            print(statement_child.type)
+                                                                                            # Looking for "else if" statements
+                                                                                            if statement_child.type == 'if_statement':
+                                                                                                print("thats an elif")
+                                                                                                #mermaid_code += f"    {state_name}_transition_{transition_state_id} : else if #colon; \n"
+                                                                                                for if_statement_child in statement_child.children:
+                                                                                                    print(if_statement_child)
+                                                                                                    if if_statement_child.type == 'binary_expression':
+                                                                                                        condition = if_statement_child.text.decode('utf-8')
+                                                                                                        mermaid_code += f"    {state_name}_transition_{transition_state_id} : else if {condition} #colon; \n"
+                                                                                                    elif if_statement_child.type == 'statement':
+                                                                                                        for statement_child in if_statement_child.children :
+                                                                                                            if statement_child.type == 'block' :
+                                                                                                                for block_child in statement_child.children :
+                                                                                                                    if block_child.type == 'statement':
+                                                                                                                        for statement_child in block_child.children:
+                                                                                                                            # Looking for assignments
+                                                                                                                            if statement_child.type == 'assignment_expression':
+                                                                                                                                consequence = statement_child.text.decode('utf-8')
+                                                                                                                                mermaid_code += f"    {state_name}_transition_{transition_state_id}: #nbsp; #nbsp; {consequence}\n"
+                                                                                                    elif if_statement_child.type == 'else_statement':
+                                                                                                        for else_statement_child in if_statement_child.children :
+                                                                                                            if else_statement_child.type == 'statement':
+                                                                                                                for statement_child in else_statement_child.children :
+                                                                                                                    print(statement_child.type)
+                                                                                                                    if statement_child.type == 'block' :
+                                                                                                                        print ("that's just an else after an elif")
+                                                                                                                        mermaid_code += f"    {state_name}_transition_{transition_state_id} : else #colon; \n"
+                                                                                                                        for block_child in statement_child.children :
+                                                                                                                            if block_child.type == 'statement':
+                                                                                                                                for statement_child in block_child.children:
+                                                                                                                                    # Looking for assignments
+                                                                                                                                    if statement_child.type == 'assignment_expression':
+                                                                                                                                        consequence = statement_child.text.decode('utf-8')
+                                                                                                                                        mermaid_code += f"    {state_name}_transition_{transition_state_id}: #nbsp; #nbsp; {consequence}\n"  
+                                                                                            # Looking for "else" statements
+                                                                                            elif statement_child.type == 'block' :
+                                                                                                print ("that's just an else")
+                                                                                                mermaid_code += f"    {state_name}_transition_{transition_state_id} : else #colon; \n"
+                                                                                                for block_child in statement_child.children :
+                                                                                                    if block_child.type == 'statement':
+                                                                                                        for statement_child in block_child.children:
+                                                                                                            # Looking for assignments
+                                                                                                            if statement_child.type == 'assignment_expression':
+                                                                                                                consequence = statement_child.text.decode('utf-8')
+                                                                                                                mermaid_code += f"    {state_name}_transition_{transition_state_id}: #nbsp; #nbsp; {consequence}\n" 
+
+                                                                        #transition_actions = f"do {statement_child.text.decode('utf-8')} \\n "
+                                                    elif transition_child.type == 'identifier' :
+                                                        link_name = transition_child.text.decode('utf-8')
+                                                        mermaid_code += f"    {state_name}_transition_{transition_state_id} -->{link_name}\n"
+                                                        #mermaid_code += f"    {state_name} -->{link_name}: when {condition} \\n {transition_actions}\n"
+                                                        transition_actions=""
 
         mermaid_code += "```\n"
 
@@ -126,11 +197,39 @@ def parse_snl(file_path, output_file_path):
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: ./script.py path/to/your_file.st path/to/output_diagram.md")
-        sys.exit(1)
 
-    snl_file_path = sys.argv[1]
-    output_file_path = sys.argv[2]
-    parse_snl(snl_file_path, output_file_path)
+    Language.build_library(
+    # Store the library in the `build` directory
+    "build/my-languages.so",
+    # Include one or more languages
+    ["tree-sitter-epics/snl"]
+    )
+
+    DB_LANGUAGE = Language("build/my-languages.so", "snl")
+
+
+    parser = argparse.ArgumentParser(prog='Plasma',
+                                 description='PLAin State Machine Acquaintance')
+    parser = argparse.ArgumentParser(
+        description='Script to create a stae diagram from a SNL state machine')
+    parser.add_argument('input_file', help='Input file, SNL format')
+    parser.add_argument('output_file', help='Output file, markdown format with Mermaid syntax')
+    parser.add_argument("-v",
+                        "--verbosity",
+                        type=int,
+                        choices=[0, 1, 2, 3, 4, 5],
+                        help="decrease output verbosity. 5 (Critical), 4 (Error), 3 (Warning, default), 2 (Info), 1 (Debug)")
+
+    args = parser.parse_args()
+    arg_input = args.input_file
+    arg_output = args.output_file
+
+    if (args.verbosity == None):
+        arg_debug = logging.WARNING
+    else:
+        arg_debug = args.verbosity * 10
+
+    logging.basicConfig(level=arg_debug)
+
+    parse_snl(arg_input, arg_output)
 

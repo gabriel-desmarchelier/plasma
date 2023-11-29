@@ -18,6 +18,8 @@ int myPv3;
 assign myPv3 to "{PREFIX}:myPv3";
 monitor myPv3;
 
+int i=0;
+
 ss ss2
 {
 
@@ -27,16 +29,28 @@ ss ss2
 		entry
 		{
 			myPv1=10;
+			pvPut(myPv1);
 		}
 
 		when (myPv1==myPv2)
 		{
 			myPv1=0;
+			myPv2=5;
 		} state state2
 
 		when (myPv1==myPv3)
 		{
 			myPv1=5;
+			if (myPv2==2) {
+				myPv3+=3;
+			}
+			else if (myPv2==3) {
+				myPv3+=2;
+			}
+			else {
+				myPv3 = 4;
+			}
+			myPv2 += 1;
 		} state state3
 	}
 
@@ -44,9 +58,20 @@ ss ss2
 
 	{
 		when (myPv2==myPv3)
-		{} state state3
+		{
+			while (myPv2 < 10) {
+				myPv2 += 1;
+				delay(1);
+			}
+			if (myPv1==5) {
+				myPv1=4;
+			}
+			else {
+				myPv1=3;
+			}
+		} state state1
 
-		when (delay(5))
+		when ((delay(5)) && (myPv2==5))
 		{} state state3
 	}
 
@@ -59,6 +84,10 @@ ss ss2
 		when (myPv1==myPv2)
 		{
 			myPv1=0;
+			for (i=0; i<10; i++) {
+				myPv1 += i;
+				delay(1);
+			}
 		} state state2
 	}
 }
