@@ -47,8 +47,11 @@ ss ss2
 			else if (myPv2==3) {
 				myPv3+=2;
 			}
-			else {
-				myPv3 = 4;
+			else if (myPv2==3) {
+				myPv3+=100;
+			}
+			else if (myPv2==3) {
+				myPv3+=999;
 			}
 			myPv2 += 1;
 		} state state3
@@ -65,6 +68,9 @@ ss ss2
 			}
 			if (myPv1==5) {
 				myPv1=4;
+			}
+			else if (myPv2==3) {
+				myPv3+=333;
 			}
 			else {
 				myPv1=3;
