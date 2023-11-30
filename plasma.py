@@ -4,6 +4,36 @@ from tree_sitter import Language, Parser
 import argparse
 import logging
 
+def print_if_statement(parent, transition_state_name):
+
+    global mermaid_code
+
+    print(parent)
+    for if_statement_child in parent.children:
+        if if_statement_child.type == 'binary_expression':
+            condition = if_statement_child.text.decode('utf-8')
+            mermaid_code += f"    {transition_state_name} : if {condition} #colon; \n"
+        elif if_statement_child.type == 'statement':
+            for statement_child in if_statement_child.children :
+                if statement_child.type == 'block' :
+                    for block_child in statement_child.children :
+                        if block_child.type == 'statement':
+                            print_statement(block_child,transition_state_name)
+        # Looking for an else
+        elif if_statement_child.type == 'else_statement':
+            for else_statement_child in if_statement_child.children :
+                if else_statement_child.type == 'statement':
+                    for statement_child in else_statement_child.children :
+                        # Looking for "else if" statements
+                        if statement_child.type == 'if_statement':
+                            print_else_if_statement(statement_child,transition_state_name) 
+                        elif statement_child.type == 'block' :
+                            print ("that's just an else")
+                            mermaid_code += f"    {transition_state_name} : else #colon; \n"
+                            for block_child in statement_child.children :
+                                if block_child.type == 'statement':
+                                    print_statement(block_child,transition_state_name)
+
 
 def print_else_if_statement(parent, transition_state_name):
 
@@ -20,7 +50,7 @@ def print_else_if_statement(parent, transition_state_name):
                 if statement_child.type == 'block' :
                     for block_child in statement_child.children :
                         if block_child.type == 'statement':
-                            print_actions(block_child,transition_state_name)
+                            print_statement(block_child,transition_state_name)
         # Looking for an else
         elif if_statement_child.type == 'else_statement':
             for else_statement_child in if_statement_child.children :
@@ -34,27 +64,74 @@ def print_else_if_statement(parent, transition_state_name):
                             mermaid_code += f"    {transition_state_name} : else #colon; \n"
                             for block_child in statement_child.children :
                                 if block_child.type == 'statement':
-                                    print_actions(block_child,transition_state_name)
+                                    print_statement(block_child,transition_state_name)
 
-def print_actions(parent, transition_state_name):
+def print_while_statement(parent, transition_state_name):
 
     global mermaid_code
 
-    print ("printing actions")
+    for while_statement_child in parent.children:
+        if while_statement_child.type == 'binary_expression':
+            condition = while_statement_child.text.decode('utf-8')
+            mermaid_code += f"    {transition_state_name} : while {condition} #colon; \n"
+        elif while_statement_child.type == 'statement':
+            for statement_child in while_statement_child.children :
+                if statement_child.type == 'block' :
+                    for block_child in statement_child.children :
+                        if block_child.type == 'statement':
+                            print_statement(block_child,transition_state_name)
+
+def print_for_statement(parent, transition_state_name):
+
+    global mermaid_code
+    print("for!!")
+    for for_statement_child in parent.children:
+        print(for_statement_child)
+        if for_statement_child.type == 'assignment_expression':
+            initializer = for_statement_child.text.decode('utf-8')
+            mermaid_code += f"    {transition_state_name} : for ({initializer}, "
+        elif for_statement_child.type == 'binary_expression':
+            condition = for_statement_child.text.decode('utf-8')
+            mermaid_code += f"{condition}, "
+        elif for_statement_child.type == 'update_expression':
+            update = for_statement_child.text.decode('utf-8')
+            mermaid_code += f"{update}) #colon; \n"
+        elif for_statement_child.type == 'statement':
+            for statement_child in for_statement_child.children :
+                if statement_child.type == 'block' :
+                    for block_child in statement_child.children :
+                        if block_child.type == 'statement':
+                            print_statement(block_child,transition_state_name)
+
+def print_statement(parent, state_name):
+
+    global mermaid_code
+
+    #print ("printing actions")
     for statement_child in parent.children:
+        print(statement_child.type)
         # Looking for assignments
         if statement_child.type == 'assignment_expression':
             consequence = statement_child.text.decode('utf-8')
-            mermaid_code += f"    {transition_state_name}: #nbsp; #nbsp; {consequence}\n"
+            mermaid_code += f"    {state_name}: #nbsp; #nbsp; {consequence}\n"
         # Looking for functions
         if statement_child.type == 'call_expression':
             for call_expression_child in statement_child.children :
                 if call_expression_child.type == 'identifier' :
                     function = call_expression_child.text.decode('utf-8')
-                    print(function)
                     if function == 'delay' :
                         consequence = statement_child.text.decode('utf-8')
-                        mermaid_code += f"    {transition_state_name}: #nbsp; #nbsp; {consequence}\n"
+                        mermaid_code += f"    {state_name}: #nbsp; #nbsp; {consequence}\n"
+        # Looking for if
+        if statement_child.type == 'if_statement':
+            print_if_statement(statement_child,state_name)
+        # Looking for while
+        if statement_child.type == 'while_statement':
+            print_while_statement(statement_child,state_name)
+        # Looking for for
+        if statement_child.type == 'for_statement':
+            print("for in a statement")
+            print_for_statement(statement_child,state_name)
 
 def parse_snl(file_path):
 
@@ -108,7 +185,7 @@ def parse_snl(file_path):
                                                         for entry_block_child in entry_child.children:
                                                             # Looking for the statements in the entry block
                                                             if entry_block_child.type == 'statement':
-                                                                print_actions(entry_block_child,state_name)
+                                                                print_statement(entry_block_child,state_name)
                                             # Looking for "when"
                                             elif state_block_child.type == 'transition':
                                                 transition_state_id += 1
@@ -128,7 +205,7 @@ def parse_snl(file_path):
                                                                     # Looking for assignments
                                                                     if statement_child.type == 'assignment_expression':
                                                                         consequence = statement_child.text.decode('utf-8')
-                                                                        mermaid_code += f"    {transition_state_name}: #nbsp; #nbsp; {consequence}\n"
+                                                                        mermaid_code += f"    {transition_state_name}: {consequence}\n"
                                                                     # Looking for functions
                                                                     if statement_child.type == 'call_expression':
                                                                         for call_expression_child in statement_child.children :
@@ -137,66 +214,74 @@ def parse_snl(file_path):
                                                                                 print(function)
                                                                                 if function == 'delay' :
                                                                                     consequence = statement_child.text.decode('utf-8')
-                                                                                    mermaid_code += f"    {transition_state_name}: #nbsp; #nbsp; {consequence}\n"
+                                                                                    mermaid_code += f"    {transition_state_name}: {consequence}\n"
                                                                     # Looking for "if" statements
                                                                     elif statement_child.type == 'if_statement':
-                                                                        print(statement_child)
-                                                                        for if_statement_child in statement_child.children:
-                                                                            if if_statement_child.type == 'binary_expression':
-                                                                                condition = if_statement_child.text.decode('utf-8')
-                                                                                mermaid_code += f"    {transition_state_name} : if {condition} #colon; \n"
-                                                                            elif if_statement_child.type == 'statement':
-                                                                                for statement_child in if_statement_child.children :
-                                                                                    if statement_child.type == 'block' :
-                                                                                        for block_child in statement_child.children :
-                                                                                            if block_child.type == 'statement':
-                                                                                                print_actions(block_child,transition_state_name)
-                                                                            # Looking for an else
-                                                                            elif if_statement_child.type == 'else_statement':
-                                                                                for else_statement_child in if_statement_child.children :
-                                                                                    if else_statement_child.type == 'statement':
-                                                                                        for statement_child in else_statement_child.children :
-                                                                                            # Looking for "else if" statements
-                                                                                            if statement_child.type == 'if_statement':
-                                                                                                print_else_if_statement(statement_child,transition_state_name) 
-                                                                                            elif statement_child.type == 'block' :
-                                                                                                print ("that's just an else")
-                                                                                                mermaid_code += f"    {transition_state_name} : else #colon; \n"
-                                                                                                for block_child in statement_child.children :
-                                                                                                    if block_child.type == 'statement':
-                                                                                                        print_actions(block_child,transition_state_name)
+                                                                        print_if_statement(statement_child,transition_state_name)
+                                                                    #    print(statement_child)
+                                                                    #    for if_statement_child in statement_child.children:
+                                                                    #        if if_statement_child.type == 'binary_expression':
+                                                                    #            condition = if_statement_child.text.decode('utf-8')
+                                                                    #            mermaid_code += f"    {transition_state_name} : if {condition} #colon; \n"
+                                                                    #        elif if_statement_child.type == 'statement':
+                                                                    #            for statement_child in if_statement_child.children :
+                                                                    #                if statement_child.type == 'block' :
+                                                                    #                    for block_child in statement_child.children :
+                                                                    #                        if block_child.type == 'statement':
+                                                                    #                            print_statement(block_child,transition_state_name)
+                                                                    #        # Looking for an else
+                                                                    #        elif if_statement_child.type == 'else_statement':
+                                                                    #            for else_statement_child in if_statement_child.children :
+                                                                    #                if else_statement_child.type == 'statement':
+                                                                    #                    for statement_child in else_statement_child.children :
+                                                                    #                        # Looking for "else if" statements
+                                                                    #                        if statement_child.type == 'if_statement':
+                                                                    #                            print_else_if_statement(statement_child,transition_state_name) 
+                                                                    #                        elif statement_child.type == 'block' :
+                                                                    #                            print ("that's just an else")
+                                                                    #                            mermaid_code += f"    {transition_state_name} : else #colon; \n"
+                                                                    #                            for block_child in statement_child.children :
+                                                                    #                                if block_child.type == 'statement':
+                                                                    #                                    print_statement(block_child,transition_state_name)
 
                                                                     # Looking for "while" statements
                                                                     elif statement_child.type == 'while_statement':
-                                                                        for while_statement_child in statement_child.children:
-                                                                            if while_statement_child.type == 'binary_expression':
-                                                                                condition = while_statement_child.text.decode('utf-8')
-                                                                                mermaid_code += f"    {transition_state_name} : while {condition} #colon; \n"
-                                                                            elif while_statement_child.type == 'statement':
-                                                                                for statement_child in while_statement_child.children :
-                                                                                    if statement_child.type == 'block' :
-                                                                                        for block_child in statement_child.children :
-                                                                                            if block_child.type == 'statement':
-                                                                                                print_actions(block_child,transition_state_name)
+                                                                        print_while_statement(statement_child,transition_state_name)
+                                                                    #    for while_statement_child in statement_child.children:
+                                                                    #        print()
+                                                                    #        if while_statement_child.type == 'binary_expression':
+                                                                    #            condition = while_statement_child.text.decode('utf-8')
+                                                                    #            mermaid_code += f"    {transition_state_name} : while {condition} #colon; \n"
+                                                                    #        elif while_statement_child.type == 'statement':
+                                                                    #            for statement_child in while_statement_child.children :
+                                                                    #                if statement_child.type == 'block' :
+                                                                    #                    for block_child in statement_child.children :
+                                                                    #                        if block_child.type == 'statement':
+                                                                    #                            print_statement(block_child,transition_state_name)
+                                                                            ## Looking for "if" statements
+                                                                            #elif while_statement_child.type == 'if_statement':
+                                                                            #    print("there's an if in a wile !")
+                                                                            #    print_if_statement(while_statement_child,statement_child,transition_state_name)
 
                                                                     # Looking for "for" statements
                                                                     elif statement_child.type == 'for_statement':
-                                                                        for for_statement_child in statement_child.children:
-                                                                            if for_statement_child.type == 'assignment_expression':
-                                                                                initializer = for_statement_child.text.decode('utf-8')
-                                                                                mermaid_code += f"    {transition_state_name} : for ({initializer}, "
-                                                                            elif for_statement_child.type == 'binary_expression':
-                                                                                condition = for_statement_child.text.decode('utf-8')
-                                                                                mermaid_code += f"{condition}, "
-                                                                            elif for_statement_child.type == 'update_expression':
-                                                                                update = for_statement_child.text.decode('utf-8')
-                                                                                mermaid_code += f"{update}) #colon; \n"
-                                                                            elif for_statement_child.type == 'statement':
-                                                                                for statement_child in for_statement_child.children :
-                                                                                    if statement_child.type == 'block' :
-                                                                                        for block_child in statement_child.children :
-                                                                                            if block_child.type == 'statement':
-                                                                                                print_actions(block_child,transition_state_name)
+                                                                        print_for_statement(statement_child,transition_state_name)
+                                                                    #    for for_statement_child in statement_child.children:
+                                                                    #        if for_statement_child.type == 'assignment_expression':
+                                                                    #            initializer = for_statement_child.text.decode('utf-8')
+                                                                    #            mermaid_code += f"    {transition_state_name} : for ({initializer}, "
+                                                                    #        elif for_statement_child.type == 'binary_expression':
+                                                                    #            condition = for_statement_child.text.decode('utf-8')
+                                                                    #            mermaid_code += f"{condition}, "
+                                                                    #        elif for_statement_child.type == 'update_expression':
+                                                                    #            update = for_statement_child.text.decode('utf-8')
+                                                                    #            mermaid_code += f"{update}) #colon; \n"
+                                                                    #        elif for_statement_child.type == 'statement':
+                                                                    #            for statement_child in for_statement_child.children :
+                                                                    #                if statement_child.type == 'block' :
+                                                                    #                    for block_child in statement_child.children :
+                                                                    #                        if block_child.type == 'statement':
+                                                                    #                            print_statement(block_child,transition_state_name)
 
 
                                                     elif transition_child.type == 'identifier' :

@@ -44,12 +44,20 @@ ss ss2
 			if (myPv2==2) {
 				myPv3+=3;
 				myPv2=1;
+			for (i=0; i<10; i++) {
+				myPv1 += i;
+				delay(5);
+			}
 			}
 			else if (myPv2==3) {
 				myPv3+=2;
 			}
 			else if (myPv2==3) {
 				myPv3+=100;
+			for (i=0; i<10; i++) {
+				myPv1 += i;
+				delay(5);
+			}
 			}
 			else if (myPv2==3) {
 				myPv3+=999;
@@ -66,7 +74,7 @@ ss ss2
 			while (myPv2 < 10) {
 				myPv2 += 1;
 				delay(1);
-			}
+			
 			if (myPv1==5) {
 				myPv1=4;
 			}
@@ -75,6 +83,7 @@ ss ss2
 			}
 			else {
 				myPv1=3;
+			}
 			}
 		} state state1
 
@@ -94,6 +103,12 @@ ss ss2
 			for (i=0; i<10; i++) {
 				myPv1 += i;
 				delay(1);
+			if (myPv1==5) {
+				myPv1=4;
+			while(myPv1<10){
+				myPv2+=1;
+			}
+			}
 			}
 			
 		} state state2
