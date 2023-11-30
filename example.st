@@ -43,6 +43,7 @@ ss ss2
 			myPv1=5;
 			if (myPv2==2) {
 				myPv3+=3;
+				myPv2=1;
 			}
 			else if (myPv2==3) {
 				myPv3+=2;
