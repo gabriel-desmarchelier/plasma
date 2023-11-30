@@ -40,6 +40,7 @@ def print_actions(parent, transition_state_name):
 
     global mermaid_code
 
+    print ("printing actions")
     for statement_child in parent.children:
         # Looking for assignments
         if statement_child.type == 'assignment_expression':
@@ -50,6 +51,7 @@ def print_actions(parent, transition_state_name):
             for call_expression_child in statement_child.children :
                 if call_expression_child.type == 'identifier' :
                     function = call_expression_child.text.decode('utf-8')
+                    print(function)
                     if function == 'delay' :
                         consequence = statement_child.text.decode('utf-8')
                         mermaid_code += f"    {transition_state_name}: #nbsp; #nbsp; {consequence}\n"
@@ -106,11 +108,7 @@ def parse_snl(file_path):
                                                         for entry_block_child in entry_child.children:
                                                             # Looking for the statements in the entry block
                                                             if entry_block_child.type == 'statement':
-                                                                for statement_child in entry_block_child.children:
-                                                                    # Looking for assignments
-                                                                    if statement_child.type == 'assignment_expression':
-                                                                        entry_action=statement_child.text.decode('utf-8')
-                                                                        mermaid_code += f"    {state_name} : {entry_action}\n"
+                                                                print_actions(entry_block_child,state_name)
                                             # Looking for "when"
                                             elif state_block_child.type == 'transition':
                                                 transition_state_id += 1
@@ -129,12 +127,17 @@ def parse_snl(file_path):
                                                                 for statement_child in transition_block_child.children:
                                                                     # Looking for assignments
                                                                     if statement_child.type == 'assignment_expression':
-                                                                        transition_action = f"{statement_child.text.decode('utf-8')}"
-                                                                        mermaid_code += f"    {transition_state_name}: {transition_action}\n"
+                                                                        consequence = statement_child.text.decode('utf-8')
+                                                                        mermaid_code += f"    {transition_state_name}: #nbsp; #nbsp; {consequence}\n"
                                                                     # Looking for functions
                                                                     if statement_child.type == 'call_expression':
-                                                                        transition_action = statement_child.text.decode('utf-8')
-                                                                        mermaid_code += f"    {transition_state_name}: #nbsp; #nbsp; {transition_action}\n"
+                                                                        for call_expression_child in statement_child.children :
+                                                                            if call_expression_child.type == 'identifier' :
+                                                                                function = call_expression_child.text.decode('utf-8')
+                                                                                print(function)
+                                                                                if function == 'delay' :
+                                                                                    consequence = statement_child.text.decode('utf-8')
+                                                                                    mermaid_code += f"    {transition_state_name}: #nbsp; #nbsp; {consequence}\n"
                                                                     # Looking for "if" statements
                                                                     elif statement_child.type == 'if_statement':
                                                                         print(statement_child)
