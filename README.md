@@ -11,7 +11,12 @@ PLASMA is based on regex, so some cases may not be managed. Feel free to contrib
 
 Usage: ./script.py path/to/your_file.st path/to/output_diagram.md
 
-Example :
+# Recommendations
+
+To make the resulting diagram more readable, one should try to respect a few rules :
+- avoid long lines : for example one can try to replace a long transition condition by two transitions to two intermediate states (note that Plasme could also manage long lines splitting but it's not the case as of today)
+
+# Example
 
 ```
 ss ss2
@@ -23,16 +28,22 @@ ss ss2
 		entry
 		{
 			myPv1=10;
+			pvPut(myPv1);
 		}
 
 		when (myPv1==myPv2)
 		{
 			myPv1=0;
+			myPv2=5;
 		} state state2
 
 		when (myPv1==myPv3)
 		{
 			myPv1=5;
+			if (myPv2==2) {
+				myPv3+=3;
+			}
+			myPv2 += 1;
 		} state state3
 	}
 
@@ -40,9 +51,14 @@ ss ss2
 
 	{
 		when (myPv2==myPv3)
-		{} state state3
+		{
+			while (myPv2 < 10) {
+				myPv2 += 1;
+				delay(1);
+			}
+		} state state1
 
-		when (delay(5))
+		when ((delay(5)) && (myPv2==5))
 		{} state state3
 	}
 
@@ -55,6 +71,11 @@ ss ss2
 		when (myPv1==myPv2)
 		{
 			myPv1=0;
+			for (i=0; i<10; i++) {
+				myPv1 += i;
+				delay(1);
+			}
+			
 		} state state2
 	}
 }
@@ -62,14 +83,50 @@ ss ss2
 
 ```mermaid
 stateDiagram
+    classDef state_style fill:#FFFAAA,stroke:black,color:black
+    classDef transition_style fill:#CFFFA0,stroke:black,color:black
+    state1:::state_style
     state1 : state1
-    state1 : myPv1=10
-    state1 --> state2: when (myPv1==myPv2) do myPv1=0 
-    state1 --> state3: when (myPv1==myPv3) do myPv1=5 
+    state1:  myPv1=10
+    state1_transition_1:::transition_style
+    state1 -->state1_transition_1
+    state1_transition_1 : when myPv1==myPv2
+    state1_transition_1:  myPv1=0
+    state1_transition_1:  myPv2=5
+    state1_transition_1 -->state2
+    state1_transition_2:::transition_style
+    state1 -->state1_transition_2
+    state1_transition_2 : when myPv1==myPv3
+    state1_transition_2:  myPv1=5
+    state1_transition_2 :  if (myPv2==2) #colon; 
+    state1_transition_2: #nbsp; #nbsp;  myPv3+=3
+    state1_transition_2:  myPv2 += 1
+    state1_transition_2 -->state3
+    state2:::state_style
     state2 : state2
-    state2 --> state3: when (myPv2==myPv3) 
-    state2 --> state3: when (delay(5)) 
+    state2_transition_1:::transition_style
+    state2 -->state2_transition_1
+    state2_transition_1 : when myPv2==myPv3
+    state2_transition_1 :  while (myPv2 < 10) #colon; 
+    state2_transition_1: #nbsp; #nbsp;  myPv2 += 1
+    state2_transition_1: #nbsp; #nbsp;  delay(1)
+    state2_transition_1 -->state1
+    state2_transition_2:::transition_style
+    state2 -->state2_transition_2
+    state2_transition_2 : when (delay(5)) && (myPv2==5)
+    state2_transition_2 -->state3
+    state3:::state_style
     state3 : state3
-    state3 --> state1: when (myPv1==0) 
-    state3 --> state2: when (myPv1==myPv2) do myPv1=0 
+    state3_transition_1:::transition_style
+    state3 -->state3_transition_1
+    state3_transition_1 : when myPv1==0
+    state3_transition_1 -->state1
+    state3_transition_2:::transition_style
+    state3 -->state3_transition_2
+    state3_transition_2 : when myPv1==myPv2
+    state3_transition_2:  myPv1=0
+    state3_transition_2 :  for (i=0, i<10, i++) #colon; 
+    state3_transition_2: #nbsp; #nbsp;  myPv1 += i
+    state3_transition_2: #nbsp; #nbsp;  delay(1)
+    state3_transition_2 -->state2
 ```
