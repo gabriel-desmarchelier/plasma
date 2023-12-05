@@ -241,10 +241,20 @@ def parse_snl(file_path):
                                                 mermaid_code += f"    {transition_state_name}:::transition_style\n"
                                                 mermaid_code += f"    {state_name} -->{transition_state_name}\n"
                                                 for transition_child in state_block_child.children :
-                                                    # Looking for transition condition
-                                                    if transition_child.type == 'binary_expression':
+                                                    # Looking for transition binary expression condition
+                                                    if transition_child.type == 'binary_expression' :# or 'call_expression':
+                                                        print(transition_child.type)
                                                         condition=transition_child.text.decode('utf-8')
                                                         mermaid_code += f"    {transition_state_name} : when {condition}\n"
+                                                    # Looking for transition functions condtion
+                                                    elif transition_child.type == 'call_expression':
+                                                        print(transition_child.type)
+                                                        for call_expression_child in transition_child.children :
+                                                            if call_expression_child.type == 'identifier' :
+                                                                function = call_expression_child.text.decode('utf-8')
+                                                                if function == 'delay' :
+                                                                    condition = transition_child.text.decode('utf-8')
+                                                                    mermaid_code += f"    {transition_state_name} : when {condition}\n"
                                                     # Looking for transition actions
                                                     elif transition_child.type == 'block' :
                                                         indent=0
