@@ -310,9 +310,11 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=arg_debug)
 
+    mermaid_code = ""
+
     if (arg_format == "md") : 
         # Generate Mermaid diagram in markdown code
-        mermaid_code = "```{mermaid}\n"
+        mermaid_code += "```{mermaid}\n"
     
     mermaid_code += "stateDiagram\n"
     
