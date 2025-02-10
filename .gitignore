@@ -1,1 +1,9 @@
+build
+dist
+poetry.lock
+output_files
+
 example.md
+output.*
+*.mmd
+*.qmd
