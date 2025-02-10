@@ -2,14 +2,47 @@
 
 Welcome to PLASMA ! PLAin State Machine Acquaintance allows one to easily create a state machine diagram from a SNL program. It is based on the Mermaid diagramming tool.
 
-# Usage
-
 The script generates Mermaid-based Markdown file. This file needs to be rendered with tools that manage Mermaid diagrams (Gitlab does, that's a good start !)
 Pandoc / quarto : to do
 
 PLASMA is based on tree-sitter-epics : https://github.com/epics-extensions/tree-sitter-epics
 
-Usage: ./script.py path/to/your_file.st path/to/output_diagram.md
+
+## Build using Poetry
+
+First, install Poetry.
+Refer to the [Poetry](https://duckduckgo.com) for instructions.
+
+To build the project,
+you can run:
+
+``` bash
+poetry install
+poetry build
+```
+
+## Execution
+
+``` bash
+poetry run ./plasma.py examples/small_example.st mmd output.mmd -v 2
+```
+
+# Usage
+```
+usage: plasma.py [-h] [-v {0,1,2,3,4,5}] input_file {mmd,md} output_file
+
+Script to create a stae diagram from a SNL state machine
+
+positional arguments:
+  input_file            Input file, SNL format
+  {mmd,md}              Output format, mermaid format or markdown format with Mermaid syntax.
+  output_file           Output file name
+
+options:
+  -h, --help            show this help message and exit
+  -v {0,1,2,3,4,5}, --verbosity {0,1,2,3,4,5}
+                        decrease output verbosity. 5 (Critical), 4 (Error), 3 (Warning, default), 2 (Info), 1 (Debug)
+```
 
 # Recommendations
 
