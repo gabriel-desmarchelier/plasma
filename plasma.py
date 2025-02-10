@@ -13,8 +13,6 @@ def print_if_statement(parent, transition_state_name):
     for if_statement_child in parent.children:
         if if_statement_child.type == 'binary_expression':
             condition = if_statement_child.text.decode('utf-8')
-            print(f"bfore if {indentation}")
-            print(indent)
             mermaid_code += f"    {transition_state_name} : {indentation} if ({condition}) #colon; \n"
             indent += 1
             apply_indent()
@@ -23,8 +21,6 @@ def print_if_statement(parent, transition_state_name):
                 if statement_child.type == 'block' :
                     for block_child in statement_child.children :
                         if block_child.type == 'statement':
-                            print(f"after if {indentation}")
-                            print(indent)
                             print_statement(block_child,transition_state_name)
         # Looking for an else
         elif if_statement_child.type == 'else_statement':
@@ -33,9 +29,9 @@ def print_if_statement(parent, transition_state_name):
                     for statement_child in else_statement_child.children :
                         # Looking for "else if" statements
                         if statement_child.type == 'if_statement':
+                            logging.debug("ELIF statement found")
                             print_else_if_statement(statement_child,transition_state_name) 
                         elif statement_child.type == 'block' :
-                            print ("that's just an else")
                             indent -= 1
                             apply_indent()
                             mermaid_code += f"    {transition_state_name} : {indentation} else #colon; \n"
@@ -78,7 +74,7 @@ def print_else_if_statement(parent, transition_state_name):
                         if statement_child.type == 'if_statement':
                             print_else_if_statement(statement_child,transition_state_name)
                         if statement_child.type == 'block' :
-                            print ("that's just an else after an elif")
+                            logging.debug("ELSE statement found after ELIF")
                             indent -= 1
                             apply_indent()
                             mermaid_code += f"    {transition_state_name} : {indentation} else #colon; \n"
@@ -157,15 +153,16 @@ def print_statement(parent, state_name):
                         mermaid_code += f"    {state_name}: {indentation} {consequence}\n"
         # Looking for if
         if statement_child.type == 'if_statement':
+            logging.debug("IF statement found")
             print_if_statement(statement_child,state_name)
         # Looking for while
         if statement_child.type == 'while_statement':
+            logging.debug("WHILE statement found")
             print_while_statement(statement_child,state_name)
         # Looking for for
         if statement_child.type == 'for_statement':
+            logging.debug("FOR statement found")
             print_for_statement(statement_child,state_name)
-    
-    print (f"indent {indent}")
 
 def apply_indent():
 
@@ -173,11 +170,9 @@ def apply_indent():
     global indentation
     i=0
     indentation=""
-    
-    print (f"indent {indent}")
+
     for i in range(indent) :
         indentation += "#nbsp; #nbsp; "
-        print (f" indentation is of {indent} spaces {indentation}")
 
 def parse_snl(file_path):
 
@@ -209,11 +204,11 @@ def parse_snl(file_path):
         for child in root_node.children:
             # Looking for a new program
             if child.type == 'program':
-                print("New program")
+                logging.info("New program found")
                 for program_child in child.children:
                     # Looking for a new state set
                     if program_child.type == 'state_set':
-                        print("New ss")
+                        logging.info("New state set found")
                         for state_set_child in program_child.children :
                             # Looking for a new state
                             if state_set_child.type == 'state':
@@ -221,6 +216,7 @@ def parse_snl(file_path):
                                     # Looking for the state name
                                     if state_child.type == 'identifier':
                                         state_name=state_child.text.decode('utf-8')
+                                        logging.debug("new state found : %s", state_name)
                                         mermaid_code += f"    {state_name}:::state_style\n"
                                         mermaid_code += f"    {state_name} : {state_name}\n"
                                     elif state_child.type == 'state_block':
@@ -228,6 +224,7 @@ def parse_snl(file_path):
                                         for state_block_child in state_child.children:
                                             # Looking for the entry in the state
                                             if state_block_child.type == 'entry':
+                                                logging.debug("state entry found")
                                                 for entry_child in state_block_child.children:
                                                     if entry_child.type == 'block':
                                                         for entry_block_child in entry_child.children:
@@ -238,17 +235,16 @@ def parse_snl(file_path):
                                             elif state_block_child.type == 'transition':
                                                 transition_state_id += 1
                                                 transition_state_name = state_name+"_transition_"+str(transition_state_id)
+                                                logging.debug("new transition found : %s", transition_state_name)
                                                 mermaid_code += f"    {transition_state_name}:::transition_style\n"
                                                 mermaid_code += f"    {state_name} -->{transition_state_name}\n"
                                                 for transition_child in state_block_child.children :
                                                     # Looking for transition binary expression condition
                                                     if transition_child.type == 'binary_expression' :# or 'call_expression':
-                                                        print(transition_child.type)
                                                         condition=transition_child.text.decode('utf-8')
                                                         mermaid_code += f"    {transition_state_name} : when {condition}\n"
                                                     # Looking for transition functions condtion
                                                     elif transition_child.type == 'call_expression':
-                                                        print(transition_child.type)
                                                         for call_expression_child in transition_child.children :
                                                             if call_expression_child.type == 'identifier' :
                                                                 function = call_expression_child.text.decode('utf-8')
@@ -267,9 +263,9 @@ def parse_snl(file_path):
                                                         transition_actions=""
 
     except FileNotFoundError:
-        print(f"Error: File {file_path} not found.")
+        logging.exception("Error: File %s not found.",file_path)
     except Exception as e:
-        print(f"Error: {e}")
+        logging.exception("Error: %s",e)
 
 if __name__ == "__main__":
 
@@ -289,7 +285,7 @@ if __name__ == "__main__":
         description='Script to create a stae diagram from a SNL state machine')
     parser.add_argument('input_file', help='Input file, SNL format')
     parser.add_argument('output_format',
-                        help='Output format, mermaid format or markdown format with Mermaid syntax',
+                        help='Output format, mermaid format or markdown format with Mermaid syntax. ',
                         choices=["mmd", "md"])
     parser.add_argument('output_file', help='Output file name')
     parser.add_argument("-v",
@@ -334,5 +330,5 @@ if __name__ == "__main__":
     with open(arg_output, 'w') as output_file:
         output_file.write(mermaid_code)
 
-    print(f"Mermaid code written to {arg_output}")
+    logging.info("Mermaid code written to %s", arg_output)
     
