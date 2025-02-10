@@ -7,7 +7,7 @@ Welcome to PLASMA ! PLAin State Machine Acquaintance allows one to easily create
 The script generates Mermaid-based Markdown file. This file needs to be rendered with tools that manage Mermaid diagrams (Gitlab does, that's a good start !)
 Pandoc / quarto : to do
 
-PLASMA is based on regex, so some cases may not be managed. Feel free to contribute.
+PLASMA is based on tree-sitter-epics : https://github.com/epics-extensions/tree-sitter-epics
 
 Usage: ./script.py path/to/your_file.st path/to/output_diagram.md
 
