@@ -57,7 +57,7 @@ To make the resulting diagram more readable, one should try to respect a few rul
 # Example
 
 ```
-ss ss2
+ss state_set_1
 {
 
     state state1
@@ -120,6 +120,9 @@ ss ss2
 ```
 
 ```mermaid
+---
+title: state_set_1
+---
 stateDiagram
     classDef state_style fill:#FFFAAA,stroke:black,color:black
     classDef transition_style fill:#CFFFA0,stroke:black,color:black
