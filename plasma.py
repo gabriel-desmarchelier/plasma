@@ -109,6 +109,43 @@ def print_transition(state_name, parent, transition_state_id):
             mermaid_code += f"    {transition_state_name} -->{link_name}\n"
 
 
+def print_statement(parent, state_name):
+
+    global mermaid_code
+    global indent
+    global indentation
+    global arg_print_statements
+
+    if  arg_print_statements is True:
+        for statement_child in parent.children:
+            # Looking for assignments
+            if statement_child.type == "assignment_expression":
+                consequence = statement_child.text.decode("utf-8")
+                mermaid_code += f"    {state_name}: {indentation} {consequence}\n"
+            # Looking for functions
+            if statement_child.type == "call_expression":
+                for call_expression_child in statement_child.children:
+                    if call_expression_child.type == "identifier":
+                        function = call_expression_child.text.decode("utf-8")
+                        if function == "delay":
+                            consequence = statement_child.text.decode("utf-8")
+                            mermaid_code += (
+                                f"    {state_name}: {indentation} {consequence}\n"
+                            )
+            # Looking for if
+            if statement_child.type == "if_statement":
+                logging.debug("IF statement found")
+                print_if_statement(statement_child, state_name)
+            # Looking for while
+            if statement_child.type == "while_statement":
+                logging.debug("WHILE statement found")
+                print_while_statement(statement_child, state_name)
+            # Looking for for
+            if statement_child.type == "for_statement":
+                logging.debug("FOR statement found")
+                print_for_statement(statement_child, state_name)
+
+
 def print_if_statement(parent, transition_state_name):
 
     global mermaid_code
@@ -246,41 +283,6 @@ def print_for_statement(parent, transition_state_name):
     apply_indent()
 
 
-def print_statement(parent, state_name):
-
-    global mermaid_code
-    global indent
-    global indentation
-
-    for statement_child in parent.children:
-        # Looking for assignments
-        if statement_child.type == "assignment_expression":
-            consequence = statement_child.text.decode("utf-8")
-            mermaid_code += f"    {state_name}: {indentation} {consequence}\n"
-        # Looking for functions
-        if statement_child.type == "call_expression":
-            for call_expression_child in statement_child.children:
-                if call_expression_child.type == "identifier":
-                    function = call_expression_child.text.decode("utf-8")
-                    if function == "delay":
-                        consequence = statement_child.text.decode("utf-8")
-                        mermaid_code += (
-                            f"    {state_name}: {indentation} {consequence}\n"
-                        )
-        # Looking for if
-        if statement_child.type == "if_statement":
-            logging.debug("IF statement found")
-            print_if_statement(statement_child, state_name)
-        # Looking for while
-        if statement_child.type == "while_statement":
-            logging.debug("WHILE statement found")
-            print_while_statement(statement_child, state_name)
-        # Looking for for
-        if statement_child.type == "for_statement":
-            logging.debug("FOR statement found")
-            print_for_statement(statement_child, state_name)
-
-
 def apply_indent():
 
     global indent
@@ -349,6 +351,7 @@ if __name__ == "__main__":
         choices=["mmd", "md"],
     )
     parser.add_argument("output_file", help="Output file name")
+    parser.add_argument("-ps","--print-statements",action="store_true", help="Print all statements included in entry or transition blocks")
     parser.add_argument(
         "-v",
         "--verbosity",
@@ -359,8 +362,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     arg_input = args.input_file
-    arg_output = args.output_file
     arg_format = args.output_format
+    arg_output = args.output_file
+    arg_print_statements = args.print_statements    
 
     if args.verbosity == None:
         arg_debug = logging.WARNING
