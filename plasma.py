@@ -5,6 +5,110 @@ import argparse
 import logging
 
 
+def print_state_set(parent):
+
+    global mermaid_code
+    global indent
+    global indentation
+
+    for state_set_child in parent.children:
+        # Looking for the state set name
+        if state_set_child.type == "identifier":
+            state_set_name = state_set_child.text.decode("utf-8")
+            logging.debug("new state set found : %s", state_set_name)
+            mermaid_code += f"    {state_set_name}:::state_set_style\n"
+            mermaid_code += f"    {state_set_name} : {state_set_name}\n"
+
+        # Looking for a new state
+        if state_set_child.type == "state":
+            print_state(state_set_child)
+
+
+def print_state(parent):
+
+    global mermaid_code
+    global indent
+    global indentation
+
+    for state_child in parent.children:
+        # Looking for the state name
+        if state_child.type == "identifier":
+            state_name = state_child.text.decode("utf-8")
+            logging.debug("new state found : %s", state_name)
+            mermaid_code += f"    {state_name}:::state_style\n"
+            mermaid_code += f"    {state_name} : {state_name}\n"
+        elif state_child.type == "state_block":
+            print_state_block(state_name, state_child)
+
+
+def print_state_block(state_name, parent):
+
+    global mermaid_code
+    global indent
+    global indentation
+
+    transition_state_id = 0
+    for state_block_child in parent.children:
+        # Looking for the entry in the state
+        if state_block_child.type == "entry":
+            logging.debug("state entry found")
+            for entry_child in state_block_child.children:
+                if entry_child.type == "block":
+                    for entry_block_child in entry_child.children:
+                        # Looking for the statements in the entry block
+                        if entry_block_child.type == "statement":
+                            print_statement(
+                                entry_block_child,
+                                state_name,
+                            )
+        # Looking for "when"
+        elif state_block_child.type == "transition":
+            transition_state_id += 1
+            print_transition(state_name, state_block_child, transition_state_id)
+
+
+def print_transition(state_name, parent, transition_state_id):
+
+    global mermaid_code
+    global indent
+    global indentation
+
+    transition_state_name = state_name + "_transition_" + str(transition_state_id)
+    logging.debug(
+        "new transition found : %s",
+        transition_state_name,
+    )
+    mermaid_code += f"    {transition_state_name}:::transition_style\n"
+    mermaid_code += f"    {state_name} -->{transition_state_name}\n"
+    for transition_child in parent.children:
+        # Looking for transition binary expression condition
+        if transition_child.type == "binary_expression":  # or 'call_expression':
+            condition = transition_child.text.decode("utf-8")
+            mermaid_code += f"    {transition_state_name} : when {condition}\n"
+        # Looking for transition functions condtion
+        elif transition_child.type == "call_expression":
+            for call_expression_child in transition_child.children:
+                if call_expression_child.type == "identifier":
+                    function = call_expression_child.text.decode("utf-8")
+                    if function == "delay":
+                        condition = transition_child.text.decode("utf-8")
+                        mermaid_code += (
+                            f"    {transition_state_name} : when {condition}\n"
+                        )
+        # Looking for transition actions
+        elif transition_child.type == "block":
+            indent = 0
+            for transition_block_child in transition_child.children:
+                if transition_block_child.type == "statement":
+                    print_statement(
+                        transition_block_child,
+                        transition_state_name,
+                    )
+        elif transition_child.type == "identifier":
+            link_name = transition_child.text.decode("utf-8")
+            mermaid_code += f"    {transition_state_name} -->{link_name}\n"
+
+
 def print_if_statement(parent, transition_state_name):
 
     global mermaid_code
@@ -53,7 +157,6 @@ def print_else_if_statement(parent, transition_state_name):
     global indent
     global indentation
 
-    print("thats an elif")
     for if_statement_child in parent.children:
         # Looking for condition of the if
         if if_statement_child.type == "binary_expression":
@@ -199,16 +302,12 @@ def parse_snl(file_path):
     parserTree.set_language(DB_LANGUAGE)
 
     try:
-        # with open(file_path, 'r') as f:
-        #    snl_content = f.readlines()
 
         with open(file_path, "r") as file:
             snl_content = file.read()
 
         tree = parserTree.parse(bytes(snl_content, "utf-8"))
         root_node = tree.root_node
-
-        state_name = ""
 
         for child in root_node.children:
             # Looking for a new program
@@ -218,114 +317,7 @@ def parse_snl(file_path):
                     # Looking for a new state set
                     if program_child.type == "state_set":
                         logging.info("New state set found")
-                        for state_set_child in program_child.children:
-                            # Looking for a new state
-                            if state_set_child.type == "state":
-                                for state_child in state_set_child.children:
-                                    # Looking for the state name
-                                    if state_child.type == "identifier":
-                                        state_name = state_child.text.decode("utf-8")
-                                        logging.debug(
-                                            "new state found : %s", state_name
-                                        )
-                                        mermaid_code += (
-                                            f"    {state_name}:::state_style\n"
-                                        )
-                                        mermaid_code += (
-                                            f"    {state_name} : {state_name}\n"
-                                        )
-                                    elif state_child.type == "state_block":
-                                        transition_state_id = 0
-                                        for state_block_child in state_child.children:
-                                            # Looking for the entry in the state
-                                            if state_block_child.type == "entry":
-                                                logging.debug("state entry found")
-                                                for (
-                                                    entry_child
-                                                ) in state_block_child.children:
-                                                    if entry_child.type == "block":
-                                                        for (
-                                                            entry_block_child
-                                                        ) in entry_child.children:
-                                                            # Looking for the statements in the entry block
-                                                            if (
-                                                                entry_block_child.type
-                                                                == "statement"
-                                                            ):
-                                                                print_statement(
-                                                                    entry_block_child,
-                                                                    state_name,
-                                                                )
-                                            # Looking for "when"
-                                            elif state_block_child.type == "transition":
-                                                transition_state_id += 1
-                                                transition_state_name = (
-                                                    state_name
-                                                    + "_transition_"
-                                                    + str(transition_state_id)
-                                                )
-                                                logging.debug(
-                                                    "new transition found : %s",
-                                                    transition_state_name,
-                                                )
-                                                mermaid_code += f"    {transition_state_name}:::transition_style\n"
-                                                mermaid_code += f"    {state_name} -->{transition_state_name}\n"
-                                                for (
-                                                    transition_child
-                                                ) in state_block_child.children:
-                                                    # Looking for transition binary expression condition
-                                                    if (
-                                                        transition_child.type
-                                                        == "binary_expression"
-                                                    ):  # or 'call_expression':
-                                                        condition = transition_child.text.decode(
-                                                            "utf-8"
-                                                        )
-                                                        mermaid_code += f"    {transition_state_name} : when {condition}\n"
-                                                    # Looking for transition functions condtion
-                                                    elif (
-                                                        transition_child.type
-                                                        == "call_expression"
-                                                    ):
-                                                        for (
-                                                            call_expression_child
-                                                        ) in transition_child.children:
-                                                            if (
-                                                                call_expression_child.type
-                                                                == "identifier"
-                                                            ):
-                                                                function = call_expression_child.text.decode(
-                                                                    "utf-8"
-                                                                )
-                                                                if function == "delay":
-                                                                    condition = transition_child.text.decode(
-                                                                        "utf-8"
-                                                                    )
-                                                                    mermaid_code += f"    {transition_state_name} : when {condition}\n"
-                                                    # Looking for transition actions
-                                                    elif (
-                                                        transition_child.type == "block"
-                                                    ):
-                                                        indent = 0
-                                                        for (
-                                                            transition_block_child
-                                                        ) in transition_child.children:
-                                                            if (
-                                                                transition_block_child.type
-                                                                == "statement"
-                                                            ):
-                                                                print_statement(
-                                                                    transition_block_child,
-                                                                    transition_state_name,
-                                                                )
-                                                    elif (
-                                                        transition_child.type
-                                                        == "identifier"
-                                                    ):
-                                                        link_name = transition_child.text.decode(
-                                                            "utf-8"
-                                                        )
-                                                        mermaid_code += f"    {transition_state_name} -->{link_name}\n"
+                        print_state_set(program_child)
 
     except FileNotFoundError:
         logging.exception("Error: File %s not found.", file_path)
@@ -386,6 +378,9 @@ if __name__ == "__main__":
     mermaid_code += "stateDiagram\n"
 
     # Defining styling for diagram
+    mermaid_code += (
+        "    classDef state_set_style fill:#D3D3D3,stroke:black,color:black\n"
+    )
     mermaid_code += "    classDef state_style fill:#FFFAAA,stroke:black,color:black\n"
     mermaid_code += (
         "    classDef transition_style fill:#CFFFA0,stroke:black,color:black\n"
