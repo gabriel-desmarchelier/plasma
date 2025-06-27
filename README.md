@@ -24,7 +24,7 @@ poetry build
 ## Execution
 
 ``` bash
-poetry run ./plasma.py examples/small_example.st mmd output.mmd -v 2
+poetry run ./plasma.py test/small_example.st mmd output.mmd -v 2
 ```
 
 # Usage
