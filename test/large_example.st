@@ -20,7 +20,7 @@ monitor myPv3;
 
 int i=0;
 
-ss ss2
+ss state_set_1
 {
 
     state state1
