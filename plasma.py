@@ -16,8 +16,19 @@ def print_state_set(parent):
         if state_set_child.type == "identifier":
             state_set_name = state_set_child.text.decode("utf-8")
             logging.debug("new state set found : %s", state_set_name)
-            mermaid_code += f"    {state_set_name}:::state_set_style\n"
-            mermaid_code += f"    {state_set_name} : {state_set_name}\n"
+            # The state set name is the title of our graph
+            mermaid_code += f"---\n"
+            mermaid_code += f"title: {state_set_name}\n"
+            mermaid_code += f"---\n"
+            # Starting the state diagram itself
+            mermaid_code += "stateDiagram\n"
+            # Defining styling for diagram
+            mermaid_code += (
+                "    classDef state_style fill:#FFFAAA,stroke:black,color:black\n"
+            )
+            mermaid_code += (
+                "    classDef transition_style fill:#CFFFA0,stroke:black,color:black\n"
+            )
 
         # Looking for a new state
         if state_set_child.type == "state":
@@ -116,7 +127,7 @@ def print_statement(parent, state_name):
     global indentation
     global arg_print_statements
 
-    if  arg_print_statements is True:
+    if arg_print_statements is True:
         for statement_child in parent.children:
             # Looking for assignments
             if statement_child.type == "assignment_expression":
@@ -351,7 +362,12 @@ if __name__ == "__main__":
         choices=["mmd", "md"],
     )
     parser.add_argument("output_file", help="Output file name")
-    parser.add_argument("-ps","--print-statements",action="store_true", help="Print all statements included in entry or transition blocks")
+    parser.add_argument(
+        "-ps",
+        "--print-statements",
+        action="store_true",
+        help="Print all statements included in entry or transition blocks",
+    )
     parser.add_argument(
         "-v",
         "--verbosity",
@@ -364,7 +380,7 @@ if __name__ == "__main__":
     arg_input = args.input_file
     arg_format = args.output_format
     arg_output = args.output_file
-    arg_print_statements = args.print_statements    
+    arg_print_statements = args.print_statements
 
     if args.verbosity == None:
         arg_debug = logging.WARNING
@@ -378,17 +394,6 @@ if __name__ == "__main__":
     if arg_format == "md":
         # Generate Mermaid diagram in markdown code
         mermaid_code += "```{mermaid}\n"
-
-    mermaid_code += "stateDiagram\n"
-
-    # Defining styling for diagram
-    mermaid_code += (
-        "    classDef state_set_style fill:#D3D3D3,stroke:black,color:black\n"
-    )
-    mermaid_code += "    classDef state_style fill:#FFFAAA,stroke:black,color:black\n"
-    mermaid_code += (
-        "    classDef transition_style fill:#CFFFA0,stroke:black,color:black\n"
-    )
 
     indent = 0
     indentation = ""
