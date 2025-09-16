@@ -20,6 +20,7 @@
 from tree_sitter import Language, Parser
 import argparse
 import logging
+import tree_sitter_snl
 
 
 def print_state_set(parent):
@@ -376,8 +377,7 @@ def parse_snl(file_path):
     global mermaid_code
     global indent
     global indentation
-    parserTree = Parser()
-    parserTree.set_language(DB_LANGUAGE)
+    parserTree = Parser(SNL_LANGUAGE)
     try:
         with open(file_path, "r") as file:
             snl_content = file.read()
@@ -399,13 +399,7 @@ def parse_snl(file_path):
 
 
 if __name__ == "__main__":
-    Language.build_library(
-        # Store the library in the `build` directory
-        "build/my-languages.so",
-        # Include one or more languages
-        ["tree-sitter-epics/snl"],
-    )
-    DB_LANGUAGE = Language("build/my-languages.so", "snl")
+    SNL_LANGUAGE = Language(tree_sitter_snl.language())
     parser = argparse.ArgumentParser(
         prog="Plasma", description="PLAin State Machine Acquaintance"
     )

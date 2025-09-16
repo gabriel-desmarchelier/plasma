@@ -1,15 +1,18 @@
 [tool.poetry]
 name = "plasma"
-version = "0.1.0"
+version = "0.2.0"
 description = "PLAin State Machine Acquaintance"
 authors = ["Gabriel Desmarchelier <gabriel.desmarchelier@cea.fr>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-tree-sitter = "^0.20.4"
-py-tree-sitter-epics = "^0.1.1"
+tree-sitter = "^0.25"
+tree-sitter-snl = "^0.1.2"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+plasma = "plasma:main"
