@@ -1,6 +1,5 @@
 build
 dist
-poetry.lock
 output_files
 
 example.md
