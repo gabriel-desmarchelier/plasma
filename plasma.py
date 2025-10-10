@@ -22,6 +22,7 @@ import argparse
 import logging
 import tree_sitter_snl
 
+
 def print_state_set(parent):
     """
     Processes state sets and initializes the Mermaid diagram.
@@ -53,6 +54,7 @@ def print_state_set(parent):
         if state_set_child.type == "state":
             print_state(state_set_child)
 
+
 def print_state(parent):
     """
     Processes individual states within a state set.
@@ -71,6 +73,7 @@ def print_state(parent):
             mermaid_code += f"    {state_name} : {state_name}\n"
         elif state_child.type == "state_block":
             print_state_block(state_name, state_child)
+
 
 def print_state_block(state_name, parent):
     """
@@ -101,6 +104,7 @@ def print_state_block(state_name, parent):
             transition_state_id += 1
             print_transition(state_name, state_block_child, transition_state_id)
 
+
 def print_transition(state_name, parent, transition_state_id):
     """
     Processes transitions between states.
@@ -119,17 +123,21 @@ def print_transition(state_name, parent, transition_state_id):
     )
     mermaid_code += f"    {transition_state_name}:::transition_style\n"
     mermaid_code += f"    {state_name} --> {transition_state_name}\n"
+    mermaid_code += f"    {transition_state_name} : when ( "
     for transition_child in parent.children:
         # Looking for transition binary expression condition
         if transition_child.type == "binary_expression":
             condition = transition_child.text.decode("utf-8")
-            print(condition)
-            # Split by both && and ||
-            operators = ['&&', '||']
+            # Replace newline characters with a space
+            condition = condition.replace("\n", " ")
+            # Split by both && and || to display on different lines
+            operators = ["&&", "||"]
             for operator in operators:
-                condition = condition.replace(operator, f" <br>{operator}")
-            print(condition)
-            mermaid_code += f"    {transition_state_name} : when ( {condition} )\n"
+                condition = condition.replace(
+                    operator,
+                    f" <br> #nbsp; #nbsp; #nbsp; #nbsp; #nbsp; #nbsp; {operator}",
+                )
+            mermaid_code += f" {condition} "
         # Looking for transition functions condition
         elif transition_child.type == "call_expression":
             for call_expression_child in transition_child.children:
@@ -137,11 +145,12 @@ def print_transition(state_name, parent, transition_state_id):
                     function = call_expression_child.text.decode("utf-8")
                     if function == "delay":
                         condition = transition_child.text.decode("utf-8")
-                        mermaid_code += (
-                            f"    {transition_state_name} : when {condition}\n"
-                        )
+                        mermaid_code += f" {condition} "
+
         # Looking for transition actions
         elif transition_child.type == "block":
+            # If a block is found, the conditions are done, we close the "when" parenthesis
+            mermaid_code += f" )\n"
             indent = 0
             for transition_block_child in transition_child.children:
                 if transition_block_child.type == "statement":
@@ -149,9 +158,11 @@ def print_transition(state_name, parent, transition_state_id):
                         transition_block_child,
                         transition_state_name,
                     )
+        # Looking for the name of the next state
         elif transition_child.type == "identifier":
             link_name = transition_child.text.decode("utf-8")
             mermaid_code += f"    {transition_state_name} --> {link_name}\n"
+
 
 def print_statement(parent, state_name):
     """
@@ -192,6 +203,7 @@ def print_statement(parent, state_name):
             if statement_child.type == "for_statement":
                 logging.debug("FOR statement found")
                 print_for_statement(statement_child, state_name)
+
 
 def print_if_statement(parent, transition_state_name):
     """
@@ -237,6 +249,7 @@ def print_if_statement(parent, transition_state_name):
                                     print_statement(block_child, transition_state_name)
     indent -= 1
     apply_indent()
+
 
 def print_else_if_statement(parent, transition_state_name):
     """
@@ -284,6 +297,7 @@ def print_else_if_statement(parent, transition_state_name):
                                 if block_child.type == "statement":
                                     print_statement(block_child, transition_state_name)
 
+
 def print_while_statement(parent, transition_state_name):
     """
     Processes `while` statements.
@@ -308,6 +322,7 @@ def print_while_statement(parent, transition_state_name):
                             print_statement(block_child, transition_state_name)
     indent -= 1
     apply_indent()
+
 
 def print_for_statement(parent, transition_state_name):
     """
@@ -342,6 +357,7 @@ def print_for_statement(parent, transition_state_name):
     indent -= 1
     apply_indent()
 
+
 def apply_indent():
     """
     Applies indentation to the Mermaid code.
@@ -352,6 +368,7 @@ def apply_indent():
     indentation = ""
     for i in range(indent):
         indentation += "#nbsp; #nbsp; #nbsp; #nbsp;"
+
 
 def parse_snl(file_path):
     """
@@ -373,6 +390,7 @@ def parse_snl(file_path):
     except Exception as e:
         logging.exception("Error: %s", e)
 
+
 def generate_mermaid_diagram(tree):
     """
     Generates the Mermaid diagram from the parse tree.
@@ -390,6 +408,7 @@ def generate_mermaid_diagram(tree):
                 if program_child.type == "state_set":
                     logging.info("New state set found")
                     print_state_set(program_child)
+
 
 if __name__ == "__main__":
     SNL_LANGUAGE = Language(tree_sitter_snl.language())
