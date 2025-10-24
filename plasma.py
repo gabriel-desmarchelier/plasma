@@ -26,7 +26,6 @@ import tree_sitter_snl
 def print_state_set(parent):
     """
     Processes state sets and initializes the Mermaid diagram.
-
     Args:
         parent (Node): The parent node representing the state set in the parse tree.
     """
@@ -59,7 +58,6 @@ def print_state_set(parent):
 def print_state(parent):
     """
     Processes individual states within a state set.
-
     Args:
         parent (Node): The parent node representing the state in the parse tree.
     """
@@ -80,7 +78,6 @@ def print_state(parent):
 def print_state_block(state_name, parent):
     """
     Processes the block of a state, including entries and transitions.
-
     Args:
         state_name (str): The name of the state.
         parent (Node): The parent node representing the state block in the parse tree.
@@ -111,7 +108,6 @@ def print_state_block(state_name, parent):
 def print_transition(state_name, parent, transition_state_id):
     """
     Processes transitions between states.
-
     Args:
         state_name (str): The name of the state.
         parent (Node): The parent node representing the transition in the parse tree.
@@ -126,12 +122,22 @@ def print_transition(state_name, parent, transition_state_id):
         transition_state_name,
     )
     mermaid_code += f"    {transition_state_name}:::transition_style\n"
-    mermaid_code += f"    {state_name} -->{transition_state_name}\n"
+    mermaid_code += f"    {state_name} --> {transition_state_name}\n"
+    mermaid_code += f"    {transition_state_name} : when ( "
     for transition_child in parent.children:
         # Looking for transition binary expression condition
-        if transition_child.type == "binary_expression":  # or 'call_expression':
+        if transition_child.type == "binary_expression":
             condition = transition_child.text.decode("utf-8")
-            mermaid_code += f"    {transition_state_name} : when {condition}\n"
+            # Replace newline characters with a space
+            condition = condition.replace("\n", " ")
+            # Split by both && and || to display on different lines
+            operators = ["&&", "||"]
+            for operator in operators:
+                condition = condition.replace(
+                    operator,
+                    f" <br> #nbsp; #nbsp; #nbsp; #nbsp; #nbsp; #nbsp; {operator}",
+                )
+            mermaid_code += f" {condition} "
         # Looking for transition functions condition
         elif transition_child.type == "call_expression":
             for call_expression_child in transition_child.children:
@@ -139,11 +145,12 @@ def print_transition(state_name, parent, transition_state_id):
                     function = call_expression_child.text.decode("utf-8")
                     if function == "delay":
                         condition = transition_child.text.decode("utf-8")
-                        mermaid_code += (
-                            f"    {transition_state_name} : when {condition}\n"
-                        )
+                        mermaid_code += f" {condition} "
+
         # Looking for transition actions
         elif transition_child.type == "block":
+            # If a block is found, the conditions are done, we close the "when" parenthesis
+            mermaid_code += f" )\n"
             indent = 0
             for transition_block_child in transition_child.children:
                 if transition_block_child.type == "statement":
@@ -151,15 +158,15 @@ def print_transition(state_name, parent, transition_state_id):
                         transition_block_child,
                         transition_state_name,
                     )
+        # Looking for the name of the next state
         elif transition_child.type == "identifier":
             link_name = transition_child.text.decode("utf-8")
-            mermaid_code += f"    {transition_state_name} -->{link_name}\n"
+            mermaid_code += f"    {transition_state_name} --> {link_name}\n"
 
 
 def print_statement(parent, state_name):
     """
     Processes statements within a state or transition.
-
     Args:
         parent (Node): The parent node representing the statement in the parse tree.
         state_name (str): The name of the state or transition.
@@ -201,7 +208,6 @@ def print_statement(parent, state_name):
 def print_if_statement(parent, transition_state_name):
     """
     Processes `if` statements.
-
     Args:
         parent (Node): The parent node representing the if statement in the parse tree.
         transition_state_name (str): The name of the transition state.
@@ -248,7 +254,6 @@ def print_if_statement(parent, transition_state_name):
 def print_else_if_statement(parent, transition_state_name):
     """
     Processes `else if` statements.
-
     Args:
         parent (Node): The parent node representing the else if statement in the parse tree.
         transition_state_name (str): The name of the transition state.
@@ -296,7 +301,6 @@ def print_else_if_statement(parent, transition_state_name):
 def print_while_statement(parent, transition_state_name):
     """
     Processes `while` statements.
-
     Args:
         parent (Node): The parent node representing the while statement in the parse tree.
         transition_state_name (str): The name of the transition state.
@@ -323,7 +327,6 @@ def print_while_statement(parent, transition_state_name):
 def print_for_statement(parent, transition_state_name):
     """
     Processes `for` statements.
-
     Args:
         parent (Node): The parent node representing the for statement in the parse tree.
         transition_state_name (str): The name of the transition state.
@@ -364,13 +367,12 @@ def apply_indent():
     i = 0
     indentation = ""
     for i in range(indent):
-        indentation += "#nbsp; #nbsp; "
+        indentation += "#nbsp; #nbsp; #nbsp; #nbsp;"
 
 
 def parse_snl(file_path):
     """
     Parses the SNL file and generates the Mermaid code.
-
     Args:
         file_path (str): The path to the SNL file.
     """
@@ -382,20 +384,30 @@ def parse_snl(file_path):
         with open(file_path, "r") as file:
             snl_content = file.read()
         tree = parserTree.parse(bytes(snl_content, "utf-8"))
-        root_node = tree.root_node
-        for child in root_node.children:
-            # Looking for a new program
-            if child.type == "program":
-                logging.info("New program found")
-                for program_child in child.children:
-                    # Looking for a new state set
-                    if program_child.type == "state_set":
-                        logging.info("New state set found")
-                        print_state_set(program_child)
+        generate_mermaid_diagram(tree)
     except FileNotFoundError:
         logging.exception("Error: File %s not found.", file_path)
     except Exception as e:
         logging.exception("Error: %s", e)
+
+
+def generate_mermaid_diagram(tree):
+    """
+    Generates the Mermaid diagram from the parse tree.
+    Args:
+        tree (Tree): The parse tree.
+    """
+    global mermaid_code
+    root_node = tree.root_node
+    for child in root_node.children:
+        # Looking for a new program
+        if child.type == "program":
+            logging.info("New program found")
+            for program_child in child.children:
+                # Looking for a new state set
+                if program_child.type == "state_set":
+                    logging.info("New state set found")
+                    print_state_set(program_child)
 
 
 if __name__ == "__main__":
@@ -427,18 +439,15 @@ if __name__ == "__main__":
         help="decrease output verbosity. 5 (Critical), 4 (Error), 3 (Warning, default), 2 (Info), 1 (Debug)",
     )
     args = parser.parse_args()
-
     arg_input = args.input_file
     arg_format = args.output_format
     arg_output = args.output_file
     arg_print_statements = args.print_statements
-
     if args.verbosity == None:
         arg_debug = logging.WARNING
     else:
         arg_debug = args.verbosity * 10
     logging.basicConfig(level=arg_debug)
-
     mermaid_code = ""
     if arg_format == "md":
         # Generate Mermaid diagram in markdown code
@@ -448,7 +457,6 @@ if __name__ == "__main__":
     parse_snl(arg_input)
     if arg_format == "md":
         mermaid_code += "```\n"
-
     # Write Mermaid code to the specified output file
     with open(arg_output, "w") as output_file:
         output_file.write(mermaid_code)

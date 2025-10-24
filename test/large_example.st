@@ -38,7 +38,7 @@ ss state_set_1
 			myPv2=5;
 		} state state2
 
-		when (myPv1==myPv3)
+		when (delay(4))
 		{
 			myPv1=5;
 			if (myPv2==2) {
@@ -69,7 +69,9 @@ ss state_set_1
 	state state2
 
 	{
-		when (myPv2==myPv3)
+		when (    myPv2 < myPv3
+			   && fabs( myPv2 - myPv1 ) > 5
+			   || delay(1))
 		{
 			while (myPv2 < 10) {
 				myPv2 += 1;
@@ -87,17 +89,17 @@ ss state_set_1
 			}
 		} state state1
 
-		when ((delay(5)) && (myPv2==5))
+		when (delay(5) && (myPv2==5))
 		{} state state3
 	}
 
     state state3
 
     {
-		when (myPv1==0)
+		when (myPv1>0)
 		{} state state1
 
-		when (myPv1==myPv2)
+		when (myPv1==myPv2 || delay(3) && fabs( myPv3 - myPv1 ) < 3)
 		{
 			myPv1=0;
 			for (i=0; i<10; i++) {
