@@ -114,5 +114,11 @@ ss state_set_1
 			}
 			
 		} state state2
+
+		when (!myPv1)
+		{} state state2
+
+		when (myPv3)
+		{} state state2
 	}
 }
