@@ -123,9 +123,37 @@ def print_transition(state_name, parent, transition_state_id):
     )
     mermaid_code += f"    {transition_state_name}:::transition_style\n"
     mermaid_code += f"    {state_name} --> {transition_state_name}\n"
-    mermaid_code += f"    {transition_state_name} : when ( "
     for transition_child in parent.children:
-        # Looking for transition binary expression condition
+        # Looking for the start of the transition condition
+        if transition_child.type == "(":
+            mermaid_code += f"    {transition_state_name} : when ( "
+            logging.debug("Start of condition found")
+            print_condition(parent)
+            mermaid_code += f" )\n"
+        # Looking for transition actions
+        elif transition_child.type == "block":
+            indent = 0
+            for transition_block_child in transition_child.children:
+                if transition_block_child.type == "statement":
+                    print_statement(
+                        transition_block_child,
+                        transition_state_name,
+                    )
+        # Looking for the name of the next state
+        elif transition_child.type == "identifier":
+            link_name = transition_child.text.decode("utf-8")
+    # Writing the link to the next state
+    mermaid_code += f"    {transition_state_name} --> {link_name}\n"
+
+
+def print_condition(parent):
+    global mermaid_code
+    for transition_child in parent.children:
+        # Looking for the end of the transition condition
+        if transition_child.type == ")":
+            logging.debug("End of condition found")
+            return
+        # Looking for binary expression condition
         if transition_child.type == "binary_expression":
             condition = transition_child.text.decode("utf-8")
             # Replace newline characters with a space
@@ -138,30 +166,22 @@ def print_transition(state_name, parent, transition_state_id):
                     f" <br> #nbsp; #nbsp; #nbsp; #nbsp; #nbsp; #nbsp; {operator}",
                 )
             mermaid_code += f" {condition} "
-        # Looking for transition functions condition
-        elif transition_child.type == "call_expression":
+        # Looking for functions condition
+        if transition_child.type == "call_expression":
             for call_expression_child in transition_child.children:
                 if call_expression_child.type == "identifier":
                     function = call_expression_child.text.decode("utf-8")
                     if function == "delay":
                         condition = transition_child.text.decode("utf-8")
                         mermaid_code += f" {condition} "
-
-        # Looking for transition actions
-        elif transition_child.type == "block":
-            # If a block is found, the conditions are done, we close the "when" parenthesis
-            mermaid_code += f" )\n"
-            indent = 0
-            for transition_block_child in transition_child.children:
-                if transition_block_child.type == "statement":
-                    print_statement(
-                        transition_block_child,
-                        transition_state_name,
-                    )
-        # Looking for the name of the next state
-        elif transition_child.type == "identifier":
-            link_name = transition_child.text.decode("utf-8")
-            mermaid_code += f"    {transition_state_name} --> {link_name}\n"
+        # Looking for operatorless binary expression condition
+        if transition_child.type == "identifier":
+            condition = transition_child.text.decode("utf-8")
+            mermaid_code += f" {condition} "
+        # Looking for unary expression condition
+        if transition_child.type == "unary_expression":
+            condition = transition_child.text.decode("utf-8")
+            mermaid_code += f" {condition} "
 
 
 def print_statement(parent, state_name):
