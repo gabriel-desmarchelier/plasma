@@ -471,7 +471,7 @@ if __name__ == "__main__":
     mermaid_code = ""
     if arg_format == "md":
         # Generate Mermaid diagram in markdown code
-        mermaid_code += "```{mermaid}\n"
+        mermaid_code += "```mermaid\n"
     indent = 0
     indentation = ""
     parse_snl(arg_input)
