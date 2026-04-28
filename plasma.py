@@ -421,6 +421,8 @@ def generate_mermaid_diagram(tree):
     root_node = tree.root_node
     for child in root_node.children:
         # Looking for a new program
+        if child.type == "ERROR":
+            logging.error("Parsing error found in the SNL file, from line %s, column %s to line %s, column %s", child.start_point.row + 1, child.start_point.column, child.end_point.row + 1, child.end_point.column)
         if child.type == "program":
             logging.info("New program found")
             for program_child in child.children:
