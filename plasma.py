@@ -441,11 +441,6 @@ if __name__ == "__main__":
         description="Script to create a state diagram from a SNL state machine"
     )
     parser.add_argument("input_file", help="Input file, SNL format")
-    parser.add_argument(
-        "output_format",
-        help="Output format, mermaid format or markdown format with Mermaid syntax. ",
-        choices=["mmd", "md"],
-    )
     parser.add_argument("output_file", help="Output file name")
     parser.add_argument(
         "-ps",
@@ -462,7 +457,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     arg_input = args.input_file
-    arg_format = args.output_format
     arg_output = args.output_file
     arg_print_statements = args.print_statements
     if args.verbosity == None:
@@ -471,14 +465,9 @@ if __name__ == "__main__":
         arg_debug = args.verbosity * 10
     logging.basicConfig(level=arg_debug)
     mermaid_code = ""
-    if arg_format == "md":
-        # Generate Mermaid diagram in markdown code
-        mermaid_code += "```{mermaid}\n"
     indent = 0
     indentation = ""
     parse_snl(arg_input)
-    if arg_format == "md":
-        mermaid_code += "```\n"
     # Write Mermaid code to the specified output file
     with open(arg_output, "w") as output_file:
         output_file.write(mermaid_code)

@@ -25,19 +25,18 @@ poetry build
 ## Execution
 
 ``` bash
-poetry run ./plasma.py test/small_example.st mmd output.mmd -v 2 # light diagram
-poetry run ./plasma.py test/small_example.st mmd output.mmd -ps -v 2 # full diagram including all statements
+poetry run ./plasma.py test/small_example.st output.mmd -v 2 # light diagram
+poetry run ./plasma.py test/small_example.st output.mmd -ps -v 2 # full diagram including all statements
 ```
 
 # Usage
 ```
-usage: plasma.py [-h] [-ps] [-v {0,1,2,3,4,5}] input_file {mmd,md} output_file
+usage: plasma.py [-h] [-ps] [-v {0,1,2,3,4,5}] input_file output_file
 
-Script to create a stae diagram from a SNL state machine
+Script to create a state diagram from a SNL state machine
 
 positional arguments:
   input_file            Input file, SNL format
-  {mmd,md}              Output format, mermaid format or markdown format with Mermaid syntax.
   output_file           Output file name
 
 options:
