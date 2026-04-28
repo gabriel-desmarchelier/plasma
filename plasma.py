@@ -17,12 +17,22 @@
 #
 # PLASMA (PLAin State Machine Acquaintance) allows one to easily create a state machine diagram from a SNL program. It is based on the Mermaid diagramming tool.
 #
-from tree_sitter import Language, Parser
+#from tree_sitter import Language, Parser, Query, QueryCursor
 import argparse
 import logging
-import tree_sitter_snl
 import os
+import tree_sitter
+import tree_sitter_snl
 
+
+class SnlParserError(Exception):
+    """SnlParser exception class.
+
+    Raised when the SNL parsing returns errors
+    """
+    def __init__(self, message) -> None:
+        """Initialize SnlParserError class with a message."""
+        super().__init__(message)
 
 def print_state_set(parent, output_folder):
     """
@@ -406,7 +416,7 @@ def parse_snl(file_path):
     Args:
         file_path (str): The path to the SNL file.
     """
-    parserTree = Parser(SNL_LANGUAGE)
+    parserTree = tree_sitter.Parser(SNL_LANGUAGE)
     try:
         with open(file_path, "r") as file:
             snl_content = file.read()
@@ -416,6 +426,27 @@ def parse_snl(file_path):
     except Exception as e:
         logging.exception("Error: %s", e)
     root_node = tree.root_node
+    logging.debug("Parsed tree:\n %s", root_node)
+    if root_node.has_error:
+        errorQuery = tree_sitter.Query(SNL_LANGUAGE,"""
+                           [
+                            (ERROR) @error-node
+                            (MISSING) @error-node
+                           ]
+                           """)
+        query_cursor = tree_sitter.QueryCursor(errorQuery)
+        errors = query_cursor.matches(root_node)
+        for error in errors:
+            logging.error(error[1].get('error-node')[0])
+            logging.error(
+                "Parsing error found in the SNL file, from line %s, column %s to line %s, column %s",
+                error[1].get('error-node')[0].start_point.row + 1,
+                error[1].get('error-node')[0].start_point.column,
+                error[1].get('error-node')[0].end_point.row + 1,
+                error[1].get('error-node')[0].end_point.column,
+            )
+        message = "Syntax error: check that input file complies with SNL syntax."
+        raise SnlParserError(message)
     return root_node
 
 
@@ -446,7 +477,7 @@ def generate_mermaid_diagrams(root_node, output_folder):
 
 
 if __name__ == "__main__":
-    SNL_LANGUAGE = Language(tree_sitter_snl.language())
+    SNL_LANGUAGE = tree_sitter.Language(tree_sitter_snl.language())
     parser = argparse.ArgumentParser(
         prog="Plasma", description="PLAin State Machine Acquaintance"
     )
