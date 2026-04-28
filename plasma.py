@@ -29,6 +29,7 @@ def print_state_set(parent, output_folder):
     Initializes the Mermaid diagram and pocesses state set.
     Args:
         parent (Node): The parent node representing the state set in the parse tree.
+        output_folder (str): The folder where to write the Mermaid files.
     """
     global mermaid_code
     global indent
@@ -422,7 +423,7 @@ def generate_mermaid_diagrams(root_node, output_folder):
     """
     Generates the Mermaid diagram from the parse tree.
     Args:
-        root (node): The root node of the parse tree.
+        root_node (Node): The root node of the parse tree.
         output_folder (str): The folder where to write the Mermaid files.
     """
     for child in root_node.children:
