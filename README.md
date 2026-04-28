@@ -28,8 +28,8 @@ poetry build
 ## Execution
 
 ``` bash
-poetry run ./plasma.py test/small_example.st output.mmd -v 2 # light diagram
-poetry run ./plasma.py test/small_example.st output.mmd -ps -v 2 # full diagram including all statements
+poetry run ./plasma.py examples/small_example.st output.mmd -v 2 # light diagram
+poetry run ./plasma.py examples/small_example.st output.mmd -ps -v 2 # full diagram including all statements
 ```
 
 # Usage
