@@ -2,7 +2,7 @@ build
 dist
 output_files
 
-example.md
-output.*
+README_files
+*.html
 *.mmd
 *.qmd
