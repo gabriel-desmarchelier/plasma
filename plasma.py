@@ -17,7 +17,7 @@
 #
 # PLASMA (PLAin State Machine Acquaintance) allows one to easily create a state machine diagram from a SNL program. It is based on the Mermaid diagramming tool.
 #
-#from tree_sitter import Language, Parser, Query, QueryCursor
+# from tree_sitter import Language, Parser, Query, QueryCursor
 import argparse
 import logging
 import os
@@ -30,9 +30,11 @@ class SnlParserError(Exception):
 
     Raised when the SNL parsing returns errors
     """
+
     def __init__(self, message) -> None:
         """Initialize SnlParserError class with a message."""
         super().__init__(message)
+
 
 def print_state_set(parent, output_folder):
     """
@@ -428,22 +430,25 @@ def parse_snl(file_path):
     root_node = tree.root_node
     logging.debug("Parsed tree:\n %s", root_node)
     if root_node.has_error:
-        errorQuery = tree_sitter.Query(SNL_LANGUAGE,"""
+        errorQuery = tree_sitter.Query(
+            SNL_LANGUAGE,
+            """
                            [
                             (ERROR) @error-node
                             (MISSING) @error-node
                            ]
-                           """)
+                           """,
+        )
         query_cursor = tree_sitter.QueryCursor(errorQuery)
         errors = query_cursor.matches(root_node)
         for error in errors:
-            logging.error(error[1].get('error-node')[0])
+            logging.error(error[1].get("error-node")[0])
             logging.error(
                 "Parsing error found in the SNL file, from line %s, column %s to line %s, column %s",
-                error[1].get('error-node')[0].start_point.row + 1,
-                error[1].get('error-node')[0].start_point.column,
-                error[1].get('error-node')[0].end_point.row + 1,
-                error[1].get('error-node')[0].end_point.column,
+                error[1].get("error-node")[0].start_point.row + 1,
+                error[1].get("error-node")[0].start_point.column,
+                error[1].get("error-node")[0].end_point.row + 1,
+                error[1].get("error-node")[0].end_point.column,
             )
         message = "Syntax error: check that input file complies with SNL syntax."
         raise SnlParserError(message)
