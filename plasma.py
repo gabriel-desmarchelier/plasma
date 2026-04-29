@@ -17,26 +17,44 @@
 #
 # PLASMA (PLAin State Machine Acquaintance) allows one to easily create a state machine diagram from a SNL program. It is based on the Mermaid diagramming tool.
 #
-from tree_sitter import Language, Parser
+# from tree_sitter import Language, Parser, Query, QueryCursor
 import argparse
 import logging
+import os
+import tree_sitter
 import tree_sitter_snl
 
 
-def print_state_set(parent):
+class SnlParserError(Exception):
+    """SnlParser exception class.
+
+    Raised when the SNL parsing returns errors
     """
-    Processes state sets and initializes the Mermaid diagram.
+
+    def __init__(self, message) -> None:
+        """Initialize SnlParserError class with a message."""
+        super().__init__(message)
+
+
+def print_state_set(parent, output_folder, state_style, transition_style):
+    """
+    Initializes the Mermaid diagram and pocesses state set.
     Args:
         parent (Node): The parent node representing the state set in the parse tree.
+        output_folder (str): The folder where to write the Mermaid files.
     """
     global mermaid_code
     global indent
     global indentation
+    mermaid_code = ""
+    indent = 0
+    indentation = ""
     for state_set_child in parent.children:
         # Looking for the state set name
         if state_set_child.type == "identifier":
             state_set_name = state_set_child.text.decode("utf-8")
             logging.debug("new state set found : %s", state_set_name)
+            output_file = f"{output_folder}/{state_set_name}.mmd"
             # The state set name is the title of our graph
             mermaid_code += f"---\n"
             mermaid_code += f"title: {state_set_name}\n"
@@ -44,15 +62,17 @@ def print_state_set(parent):
             # Starting the state diagram itself
             mermaid_code += "stateDiagram\n"
             # Defining styling for diagram
-            mermaid_code += (
-                "    classDef state_style fill:#FFFAAA,stroke:black,color:black\n"
-            )
-            mermaid_code += (
-                "    classDef transition_style fill:#CFFFA0,stroke:black,color:black\n"
-            )
+            if state_style is not None:
+                mermaid_code += f"    classDef state_style {state_style}\n"
+            if transition_style is not None:
+                mermaid_code += f"    classDef transition_style {transition_style}\n"
         # Looking for a new state
         if state_set_child.type == "state":
             print_state(state_set_child)
+    # Write Mermaid code to the specified output file
+    with open(output_file, "w") as f:
+        f.write(mermaid_code)
+    logging.info("Mermaid code written to %s", output_file)
 
 
 def print_state(parent):
@@ -396,62 +416,94 @@ def parse_snl(file_path):
     Args:
         file_path (str): The path to the SNL file.
     """
-    global mermaid_code
-    global indent
-    global indentation
-    parserTree = Parser(SNL_LANGUAGE)
+    parserTree = tree_sitter.Parser(SNL_LANGUAGE)
     try:
         with open(file_path, "r") as file:
             snl_content = file.read()
         tree = parserTree.parse(bytes(snl_content, "utf-8"))
-        generate_mermaid_diagram(tree)
     except FileNotFoundError:
         logging.exception("Error: File %s not found.", file_path)
     except Exception as e:
         logging.exception("Error: %s", e)
+    root_node = tree.root_node
+    logging.debug("Parsed tree:\n %s", root_node)
+    if root_node.has_error:
+        errorQuery = tree_sitter.Query(
+            SNL_LANGUAGE,
+            """
+                           [
+                            (ERROR) @error-node
+                            (MISSING) @error-node
+                           ]
+                           """,
+        )
+        query_cursor = tree_sitter.QueryCursor(errorQuery)
+        errors = query_cursor.matches(root_node)
+        for error in errors:
+            logging.error(error[1].get("error-node")[0])
+            logging.error(
+                "Parsing error found in the SNL file, from line %s, column %s to line %s, column %s",
+                error[1].get("error-node")[0].start_point.row + 1,
+                error[1].get("error-node")[0].start_point.column,
+                error[1].get("error-node")[0].end_point.row + 1,
+                error[1].get("error-node")[0].end_point.column,
+            )
+        message = "Syntax error: check that input file complies with SNL syntax."
+        raise SnlParserError(message)
+    return root_node
 
 
-def generate_mermaid_diagram(tree):
+def generate_mermaid_diagrams(root_node, output_folder, state_style, transition_style):
     """
     Generates the Mermaid diagram from the parse tree.
     Args:
-        tree (Tree): The parse tree.
+        root_node (Node): The root node of the parse tree.
+        output_folder (str): The folder where to write the Mermaid files.
     """
-    global mermaid_code
-    root_node = tree.root_node
     for child in root_node.children:
         # Looking for a new program
         if child.type == "ERROR":
-            logging.error("Parsing error found in the SNL file, from line %s, column %s to line %s, column %s", child.start_point.row + 1, child.start_point.column, child.end_point.row + 1, child.end_point.column)
+            logging.error(
+                "Parsing error found in the SNL file, from line %s, column %s to line %s, column %s",
+                child.start_point.row + 1,
+                child.start_point.column,
+                child.end_point.row + 1,
+                child.end_point.column,
+            )
         if child.type == "program":
             logging.info("New program found")
             for program_child in child.children:
                 # Looking for a new state set
                 if program_child.type == "state_set":
                     logging.info("New state set found")
-                    print_state_set(program_child)
+                    print_state_set(
+                        program_child, output_folder, state_style, transition_style
+                    )
 
 
 if __name__ == "__main__":
-    SNL_LANGUAGE = Language(tree_sitter_snl.language())
+    SNL_LANGUAGE = tree_sitter.Language(tree_sitter_snl.language())
     parser = argparse.ArgumentParser(
         prog="Plasma", description="PLAin State Machine Acquaintance"
     )
     parser = argparse.ArgumentParser(
-        description="Script to create a state diagram from a SNL state machine"
+        description="Script to create state diagrams from a SNL program. Each state set (ss) creates a Mermaid file in the output folder."
     )
     parser.add_argument("input_file", help="Input file, SNL format")
-    parser.add_argument(
-        "output_format",
-        help="Output format, mermaid format or markdown format with Mermaid syntax. ",
-        choices=["mmd", "md"],
-    )
-    parser.add_argument("output_file", help="Output file name")
+    parser.add_argument("output_folder", help="Output folder")
     parser.add_argument(
         "-ps",
         "--print-statements",
         action="store_true",
         help="Print all statements included in entry or transition blocks",
+    )
+    parser.add_argument(
+        "--state-style",
+        help="Define styling for state represententation (e.g. fill:#FFFAAA,stroke:black,color:black). See https://mermaid.js.org/syntax/stateDiagram.html#styling-with-classdefs.",
+    )
+    parser.add_argument(
+        "--transition-style",
+        help="Define styling for transition represententation (e.g. fill:#CFFFA0,stroke:black,color:black). See https://mermaid.js.org/syntax/stateDiagram.html#styling-with-classdefs.",
     )
     parser.add_argument(
         "-v",
@@ -462,24 +514,21 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     arg_input = args.input_file
-    arg_format = args.output_format
-    arg_output = args.output_file
+    arg_output_folder = args.output_folder
     arg_print_statements = args.print_statements
+    arg_state_style = args.state_style
+    arg_transition_style = args.transition_style
     if args.verbosity == None:
         arg_debug = logging.WARNING
     else:
         arg_debug = args.verbosity * 10
     logging.basicConfig(level=arg_debug)
+    if not os.path.exists(arg_output_folder):
+        os.makedirs(arg_output_folder)
     mermaid_code = ""
-    if arg_format == "md":
-        # Generate Mermaid diagram in markdown code
-        mermaid_code += "```{mermaid}\n"
     indent = 0
     indentation = ""
-    parse_snl(arg_input)
-    if arg_format == "md":
-        mermaid_code += "```\n"
-    # Write Mermaid code to the specified output file
-    with open(arg_output, "w") as output_file:
-        output_file.write(mermaid_code)
-    logging.info("Mermaid code written to %s", arg_output)
+    root_node = parse_snl(arg_input)
+    generate_mermaid_diagrams(
+        root_node, arg_output_folder, arg_state_style, arg_transition_style
+    )

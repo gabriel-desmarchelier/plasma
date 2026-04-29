@@ -1,13 +1,16 @@
 # Introduction
 
-Welcome to PLASMA ! PLAin State Machine Acquaintance allows one to easily create a state machine diagram from a SNL program. It is based on the Mermaid diagramming tool.
+Welcome to PLASMA ! PLAin State Machine Acquaintance allows one to easily create a state machine diagram from a SNL program.
 
-The script generates Mermaid-based Markdown file. This file needs to be rendered with tools that manage Mermaid diagrams (Gitlab does, that's a good start !)
+The script generates Mermaid files. Each state set (ss) of the SNL program creates its own Mermaid file in an output folder. These files need to be rendered with tools that manage Mermaid diagrams (Gitlab does, that's a good start !)
+
+PLASMA is based on:
+
+- [tree-sitter-snl](https://github.com/minijackson/tree-sitter-snl) for parsing the SNL file.
+
+- [Mermaid](https://mermaid.ai/web/) for diagramming.
 
 Pandoc / quarto : to do
-
-PLASMA is based on the [tree-sitter-epics parser](https://github.com/epics-extensions/tree-sitter-epics).
-
 
 ## Build using Poetry
 
@@ -25,34 +28,39 @@ poetry build
 ## Execution
 
 ``` bash
-poetry run ./plasma.py test/small_example.st mmd output.mmd -v 2 # light diagram
-poetry run ./plasma.py test/small_example.st mmd output.mmd -ps -v 2 # full diagram including all statements
+poetry run ./plasma.py examples/small_example.st output.mmd -v 2 # light diagram
+poetry run ./plasma.py examples/small_example.st output.mmd -ps -v 2 # full diagram including all statements
 ```
 
 # Usage
 ```
-usage: plasma.py [-h] [-ps] [-v {0,1,2,3,4,5}] input_file {mmd,md} output_file
+usage: plasma.py [-h] [-ps] [--state-style STATE_STYLE] [--transition-style TRANSITION_STYLE] [-v {0,1,2,3,4,5}] input_file output_folder
 
-Script to create a stae diagram from a SNL state machine
+Script to create state diagrams from a SNL program. Each state set (ss) creates a Mermaid file in the output folder.
 
 positional arguments:
   input_file            Input file, SNL format
-  {mmd,md}              Output format, mermaid format or markdown format with Mermaid syntax.
-  output_file           Output file name
+  output_folder         Output folder
 
 options:
   -h, --help            show this help message and exit
   -ps, --print-statements
                         Print all statements included in entry or transition blocks
+  --state-style STATE_STYLE
+                        Define styling for state represententation (e.g. fill:#FFFAAA,stroke:black,color:black). See https://mermaid.js.org/syntax/stateDiagram.html#styling-with-
+                        classdefs.
+  --transition-style TRANSITION_STYLE
+                        Define styling for transition represententation (e.g. fill:#CFFFA0,stroke:black,color:black). See https://mermaid.js.org/syntax/stateDiagram.html#styling-with-
+                        classdefs.
   -v {0,1,2,3,4,5}, --verbosity {0,1,2,3,4,5}
                         decrease output verbosity. 5 (Critical), 4 (Error), 3 (Warning, default), 2 (Info), 1 (Debug)
 ```
 
-# Recommendations
+# Notes
 
-To make the resulting diagram more readable, one should try to respect a few rules :   
-- avoid long lines : for example one can try to replace a long transition condition by two transitions to two intermediate states (note that Plasme could also manage long lines splitting but it's not the case as of today)   
-- more to add ?
+- Inclusion of other SNL files is not supported (via `#include myStateSet.st`). One must manage includes manually before using PLASMA.
+
+- Not all Mermaid visualizers support the `classDef` definition, set by `--state-style` and `--transition-style` arguments.
 
 # Example
 
