@@ -36,7 +36,7 @@ class SnlParserError(Exception):
         super().__init__(message)
 
 
-def print_state_set(parent, output_folder):
+def print_state_set(parent, output_folder, state_style, transition_style):
     """
     Initializes the Mermaid diagram and pocesses state set.
     Args:
@@ -62,12 +62,10 @@ def print_state_set(parent, output_folder):
             # Starting the state diagram itself
             mermaid_code += "stateDiagram\n"
             # Defining styling for diagram
-            mermaid_code += (
-                "    classDef state_style fill:#FFFAAA,stroke:black,color:black\n"
-            )
-            mermaid_code += (
-                "    classDef transition_style fill:#CFFFA0,stroke:black,color:black\n"
-            )
+            if state_style is not None:
+                mermaid_code += f"    classDef state_style {state_style}\n"
+            if transition_style is not None:
+                mermaid_code += f"    classDef transition_style {transition_style}\n"
         # Looking for a new state
         if state_set_child.type == "state":
             print_state(state_set_child)
@@ -455,7 +453,7 @@ def parse_snl(file_path):
     return root_node
 
 
-def generate_mermaid_diagrams(root_node, output_folder):
+def generate_mermaid_diagrams(root_node, output_folder, state_style, transition_style):
     """
     Generates the Mermaid diagram from the parse tree.
     Args:
@@ -478,7 +476,9 @@ def generate_mermaid_diagrams(root_node, output_folder):
                 # Looking for a new state set
                 if program_child.type == "state_set":
                     logging.info("New state set found")
-                    print_state_set(program_child, output_folder)
+                    print_state_set(
+                        program_child, output_folder, state_style, transition_style
+                    )
 
 
 if __name__ == "__main__":
@@ -498,6 +498,14 @@ if __name__ == "__main__":
         help="Print all statements included in entry or transition blocks",
     )
     parser.add_argument(
+        "--state-style",
+        help="Define styling for state represententation (e.g. fill:#FFFAAA,stroke:black,color:black). See https://mermaid.js.org/syntax/stateDiagram.html#styling-with-classdefs.",
+    )
+    parser.add_argument(
+        "--transition-style",
+        help="Define styling for transition represententation (e.g. fill:#CFFFA0,stroke:black,color:black). See https://mermaid.js.org/syntax/stateDiagram.html#styling-with-classdefs.",
+    )
+    parser.add_argument(
         "-v",
         "--verbosity",
         type=int,
@@ -508,6 +516,8 @@ if __name__ == "__main__":
     arg_input = args.input_file
     arg_output_folder = args.output_folder
     arg_print_statements = args.print_statements
+    arg_state_style = args.state_style
+    arg_transition_style = args.transition_style
     if args.verbosity == None:
         arg_debug = logging.WARNING
     else:
@@ -519,4 +529,6 @@ if __name__ == "__main__":
     indent = 0
     indentation = ""
     root_node = parse_snl(arg_input)
-    generate_mermaid_diagrams(root_node, arg_output_folder)
+    generate_mermaid_diagrams(
+        root_node, arg_output_folder, arg_state_style, arg_transition_style
+    )
