@@ -17,7 +17,7 @@
 #
 # PLASMA (PLAin State Machine Acquaintance) allows one to easily create a state machine diagram from a SNL program. It is based on the Mermaid diagramming tool.
 #
-# from tree_sitter import Language, Parser, Query, QueryCursor
+
 import argparse
 import logging
 import os
