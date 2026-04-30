@@ -1,3 +1,7 @@
+> [!CAUTION]
+> This repo is archived and should't be used anymore.
+> PLASMA is now hosted at https://github.com/epics-extensions/plasma
+
 # Introduction
 
 Welcome to PLASMA ! PLAin State Machine Acquaintance allows one to easily create a state machine diagram from a SNL program.
